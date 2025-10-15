@@ -298,28 +298,39 @@ function LeaveApplication() {
 
             {file.length > 0 && (
               <div className="file-preview-list">
-                {file.map((file, index) => (
-                  <div key={index} className="file-preview">
-                    {file.type.startsWith("image/") ? (
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        className="file-thumb"
-                      />
-                    ) : (
-                      <p>{file.name}</p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFile((prev) => prev.filter((_, i) => i !== index))
-                      }
-                      className="remove-btn"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                {file.map((file, index) => {
+                  const fileURL = URL.createObjectURL(file);
+                  return (
+                    <div key={index} className="file-preview">
+                      <a
+                        href={fileURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Click to preview"
+                        className="file-link"
+                      >
+                        {file.type.startsWith("image/") ? (
+                          <img
+                            src={fileURL}
+                            alt={file.name}
+                            className="file-thumb"
+                          />
+                        ) : (
+                          <p className="file-name">{file.name}</p>
+                        )}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFile((prev) => prev.filter((_, i) => i !== index))
+                        }
+                        className="remove-btn"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -334,3 +345,4 @@ function LeaveApplication() {
 }
 
 export default LeaveApplication;
+
