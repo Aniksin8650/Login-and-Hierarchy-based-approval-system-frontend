@@ -111,3 +111,46 @@
   font-size: 16px;
   cursor: pointer;
 }
+
+/* Remove default link styling */
+.file-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Subtle hover animation */
+.file-link:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Image preview style */
+.file-thumb {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+/* Hover effect for image preview */
+.file-link:hover .file-thumb {
+  transform: scale(1.08);
+}
+
+/* Text preview style for non-image files */
+.file-name {
+  background: #f4f4f4;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+/* Hover effect for text filenames */
+.file-link:hover .file-name {
+  background: #e9e9e9;
+  transform: scale(1.05);
+}
