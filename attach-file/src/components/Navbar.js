@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+// import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Navbar.css";
 
 const Navbar = () => {
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  // const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
 
   return (
@@ -37,3 +37,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
