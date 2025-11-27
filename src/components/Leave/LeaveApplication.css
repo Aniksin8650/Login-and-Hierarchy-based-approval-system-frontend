@@ -1,0 +1,319 @@
+/* --- Main Container --- */
+.leave-container {
+  max-width: 600px;
+  margin: 80px auto;
+  padding: 20px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  background: #f9f9f9;
+}
+
+.leave-container h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+/* --- Form Rows --- */
+.form-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 15px 0;
+  gap: 10px;
+  flex-wrap: wrap; /* ✅ allow wrapping only when truly needed */
+}
+
+.form-row label {
+  flex: 1;
+  font-weight: bold;
+  margin-right: 15px;
+  min-width: 180px; /* ✅ keeps labels aligned */
+}
+
+.form-row input[type="text"],
+.form-row input[type="file"],
+.form-row .phone-input {
+  flex: 2;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.form-row input[type="date"] {
+  flex: 1.5;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  max-width: 200px;
+}
+
+
+
+/* --- Phone Input --- */
+.phone-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phone-input span {
+  font-weight: bold;
+  color: #333;
+}
+
+/* --- Error & Success --- */
+.input-error {
+  border: 2px solid red;
+}
+
+.success-message {
+  color: green;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* --- Attachments Section --- */
+.attach-row {
+  align-items: flex-start;
+}
+
+.attach-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 100%;
+  gap: 20px;
+}
+
+.attach-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  height: fit-content;
+}
+
+.file-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.file-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f4f4f4;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.file-thumb {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+/* --- File Link Hover Effects --- */
+.file-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.file-link:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.file-link:hover .file-thumb {
+  transform: scale(1.08);
+}
+
+.file-name {
+  background: #f4f4f4;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.file-link:hover .file-name {
+  background: #e9e9e9;
+  transform: scale(1.05);
+}
+
+.remove-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* --- Buttons Section --- */
+.button-row {
+  display: flex;
+  justify-content: flex-end;   /* aligns buttons to the right */
+  align-items: end;
+  gap: 15px;
+  margin-top: 15px;
+  flex-wrap: nowrap;           /* prevents stacking */
+}
+
+/* ✅ Submit Button — gradient blue */
+.submit-btn {
+  width: 200px;
+  height: 45px;
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.submit-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ✅ Reset Button — red, same size */
+.reset-btn {
+  width: 200px;
+  height: 45px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.reset-btn:hover {
+  background-color: #d32f2f;
+  transform: translateY(-1px);
+}
+
+.print-btn-container {
+  display: flex;
+  justify-content: center;
+  margin: 0px 0 40px 0;
+}
+
+.print-btn {
+  background: linear-gradient(90deg, #00b09b, #96c93d);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.print-btn:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+
+/* --- Submitted Table Section --- */
+.submitted-section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 40px auto 60px auto; /* ✅ adds gap before footer */
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  overflow-x: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.submitted-section h3 {
+  text-align: center;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.applications-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.applications-table th,
+.applications-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: center;
+}
+
+.applications-table th {
+  background: #5b86e5;
+  color: white;
+}
+
+.applications-table tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+/* --- Responsive Fixes --- */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: row; /* ✅ stay side-by-side */
+    flex-wrap: wrap;
+  }
+
+  .form-row label {
+    width: 40%; /* ✅ label on left */
+    margin-bottom: 0;
+  }
+
+  .form-row input[type="text"],
+  .form-row input[type="date"],
+  .form-row input[type="file"],
+  .form-row .phone-input {
+    width: 53%; /* ✅ input stays next to label */
+  }
+}
+/* --- Edit Button Styling (Restored Original Look) --- */
+.edit-btn {
+  background-color: #007bff !important;
+  color: white !important;
+  border: none !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.edit-btn:hover {
+  background-color: #0056b3 !important;
+  transform: scale(1.05);
+}
+
+.attach-row {
+  align-items: flex-start;
+}
+
+.attach-section {
+  margin-left: 10px;
+  width: 100%;
+}

@@ -1,0 +1,34 @@
+.ta-container {
+  max-width: 900px;
+  margin: 16px auto;
+  padding: 18px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.form-row { display:flex; gap:12px; align-items:center; margin-bottom:10px; }
+.form-row label { width:160px; font-weight:600; }
+.form-row input[type="text"], .form-row input[type="date"] { flex:1; padding:8px; border-radius:6px; border:1px solid #ddd; }
+
+.phone-input { display:flex; align-items:center; gap:8px; }
+.phone-input span { background:#efefef; padding:6px 8px; border-radius:6px; }
+
+.button-row { margin-top:14px; display:flex; gap:10px; }
+.submit-btn { padding:8px 14px; border-radius:6px; border:none; background:#1976d2; color:white; cursor:pointer; }
+.reset-btn { padding:8px 14px; border-radius:6px; border:1px solid #ccc; background:white; cursor:pointer; }
+
+.success-message { background:#e6ffed; padding:8px 10px; border-radius:6px; color:#1a7f3a; margin-bottom:12px; }
+
+.applications-table { width:100%; border-collapse:collapse; margin-top:12px; }
+.applications-table th, .applications-table td { border:1px solid #eee; padding:8px; text-align:left; }
+.edit-btn { padding:6px 10px; border-radius:6px; border:none; background:#ff9800; color:white; cursor:pointer; }
+
+/* Attach adjustments */
+.attach-row { align-items:flex-start; }
+.attach-section { margin-left:10px; width:100%; }
+
+/* file preview row (keeps consistency with AttachFile.css) */
+.file-preview { display:flex; align-items:center; justify-content:space-between; width:260px; padding:8px 12px; border:1px solid #ddd; border-radius:6px; background:#fafafa; }
+.file-name { font-size:14px; font-weight:500; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.remove-btn { background:#ff4d4d; border:none; color:white; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; }
