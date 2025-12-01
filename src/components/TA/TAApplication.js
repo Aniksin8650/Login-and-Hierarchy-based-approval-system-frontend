@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./TAApplication.css";
 import "../Shared/AttachFile.css";
 import { useLocation } from "react-router-dom";
-// import { useNavigate } from "react-router-dom";
 
 import AttachFile from "../Shared/AttachFile";
 
 function TAApplication() {
   const location = useLocation();
   const { applicationType } = location.state || { applicationType: "ta" };
-  // const navigate = useNavigate();
 
   const [employeeId, setEmployeeId] = useState("");
   const [employeeData, setEmployeeData] = useState({});
@@ -27,187 +25,266 @@ function TAApplication() {
 
   const [errors, setErrors] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const [applications, setApplications] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("ApplnNo");
+  const [sortDirection, setSortDirection] = useState("asc");
 
+  const [message, setMessage] = useState(null);
+  const [messageType, setMessageType] = useState("info");
 
-  const loadUserFromLocal = () => {
+  const API_BASE =
+    process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
+
+  const showToast = (msg, type = "info") => {
+    setMessage(msg);
+    setMessageType(type);
+    setTimeout(() => setMessage(null), 4000);
+  };
+
+  // -------- Load TA applications --------
+  const loadTAApplications = useCallback(
+    async (empId) => {
+      if (!empId) return;
       try {
-        const stored = localStorage.getItem("userInfo");
-        if (!stored) return;
-  
-        const u = JSON.parse(stored);
-  
-        const empId = u.empId || "";
-        const name = u.name || "";
-        const department = u.department || "";
-        const designation = u.designation || "";
-        const rawPhone = u.phone ? String(u.phone) : "";
-        const cleanedPhone = rawPhone.replace(/\D/g, "").slice(0, 10);
-  
-        setEmployeeId(empId);
-        setEmployeeData({
-          empId,
-          name,
-          department,
-          designation,
-        });
-        setContact(cleanedPhone);
+        const res = await fetch(`${API_BASE}/api/ta/empId/${empId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = Array.isArray(data)
+            ? data.map((d) => ({
+                ApplnNo: d.applnNo || d.ApplnNo,
+                empId: d.empId,
+                name: d.name,
+                department: d.department,
+                designation: d.designation,
+                reason: d.reason,
+                startDate: d.startDate,
+                endDate: d.endDate,
+                contact: d.contact,
+                applicationType: d.applicationType,
+                travelDate: d.travelDate,
+                distance: d.distance,
+                taAmount: d.taAmount,
+                travelMode: d.travelMode,
+                files: d.fileName
+                  ? d.fileName
+                      .split(";")
+                      .filter(Boolean)
+                      .map((name) => ({ name }))
+                  : [],
+              }))
+            : [];
+          setApplications(mapped);
+        } else {
+          setApplications([]);
+          showToast("Failed to load TA applications.", "error");
+        }
       } catch (err) {
-        console.error("Failed to load userInfo from localStorage:", err);
+        console.error("Error loading TA applications:", err);
+        setApplications([]);
+        showToast("Server error while loading TA applications.", "error");
       }
-    };
-  
-    useEffect(() => {
-      loadUserFromLocal();
-    }, []);
+    },
+    [API_BASE]
+  );
 
-  // const fetchEmployeeDetails = async () => {
-  //   const id = employeeId.trim();
-  //   if (!id) {
-  //     setEmployeeData({});
-  //     return;
-  //   }
-  //   try {
-  //     const res = await fetch(`http://localhost:8080/api/employees/id/${id}`);
-  //     if (res.ok) {
-  //       const data = await res.json();
-  //       setEmployeeData(data);
-  //     } else {
-  //       setEmployeeData({});
-  //     }
-  //   } catch (err) {
-  //     console.error("Error fetching employee:", err);
-  //     setEmployeeData({});
-  //   }
-  // };
+  // -------- Load user --------
+  const loadUserFromLocal = useCallback(() => {
+    try {
+      const stored = localStorage.getItem("userInfo");
+      if (!stored) return;
+
+      const u = JSON.parse(stored);
+
+      const empId = u.empId || "";
+      const name = u.name || "";
+      const department = u.department || "";
+      const designation = u.designation || "";
+      const rawPhone = u.phone ? String(u.phone) : "";
+      const cleanedPhone = rawPhone.replace(/\D/g, "").slice(0, 10);
+
+      setEmployeeId(empId);
+      setEmployeeData({
+        empId,
+        name,
+        department,
+        designation,
+      });
+      setContact(cleanedPhone);
+
+      loadTAApplications(empId);
+    } catch (err) {
+      console.error("Failed to load userInfo from localStorage:", err);
+      showToast("Error reading user info. Please relogin.", "error");
+    }
+  }, [loadTAApplications]);
+
+  useEffect(() => {
+    loadUserFromLocal();
+  }, [loadUserFromLocal]);
+
+  const buildFilesFromServer = (fileNameString, appType, empId) => {
+    if (!fileNameString) return [];
+    return fileNameString
+      .split(";")
+      .filter(Boolean)
+      .map((name) => ({
+        name,
+        url: `${API_BASE}/uploads/${appType}/${empId}/${name}`,
+        isServerFile: true,
+      }));
+  };
 
   const getInputClass = (field) =>
     submitAttempted && errors[field] ? "input-error" : "";
 
+  // -------- Submit handler --------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitAttempted(true);
+
     const newErrors = {};
 
-    if (!employeeId.trim()) newErrors.employeeId = true;
-    if (!employeeData || !employeeData.empId) newErrors.employeeId = true;
-    if (!reason.trim()) newErrors.reason = true;
-    if (!startDate) newErrors.startDate = true;
-    if (!endDate) newErrors.endDate = true;
-    if (startDate && endDate && new Date(endDate) < new Date(startDate))
-      newErrors.endDate = true;
-    if (!contact || contact.length !== 10) newErrors.contact = true;
-    if (!file || file.length === 0) newErrors.file = true;
+    if (!employeeId.trim() || !employeeData || !employeeData.empId) {
+      newErrors.empId = "Employee ID is required";
+    }
+    if (!reason.trim()) {
+      newErrors.reason = "Reason is required";
+    }
+    if (!startDate) {
+      newErrors.startDate = "Start date is required";
+    }
+    if (!endDate) {
+      newErrors.endDate = "End date is required";
+    } else if (startDate && new Date(endDate) < new Date(startDate)) {
+      newErrors.endDate = "End date cannot be before start date";
+    }
+    if (!contact || contact.length !== 10) {
+      newErrors.contact = "Contact must be 10 digits";
+    }
 
-    // TA-specific validations
-    if (!travelDate) newErrors.travelDate = true;
-    if (!distance || isNaN(parseFloat(distance))) newErrors.distance = true;
-    if (!taAmount || isNaN(parseFloat(taAmount))) newErrors.taAmount = true;
-    if (!travelMode.trim()) newErrors.travelMode = true;
+    // TA-specific
+    if (!travelDate) {
+      newErrors.travelDate = "Travel date is required";
+    }
+    if (!distance || isNaN(parseFloat(distance))) {
+      newErrors.distance = "Enter valid distance";
+    }
+    if (!taAmount || isNaN(parseFloat(taAmount))) {
+      newErrors.taAmount = "Enter valid TA amount";
+    }
+    if (!travelMode.trim()) {
+      newErrors.travelMode = "Travel mode is required";
+    }
+    if (!file || file.length === 0) {
+      newErrors.files = "At least one attachment is required";
+    }
 
     setErrors(newErrors);
+
     if (Object.keys(newErrors).length > 0) {
-      alert("Please fix the highlighted fields before submitting.");
+      showToast("Please fix the highlighted fields before submitting.", "error");
       return;
     }
 
     const formData = new FormData();
-    formData.append("empId", employeeData.empId);
+    formData.append("empId", employeeData.empId || employeeId);
     formData.append("applicationType", applicationType);
-    formData.append("name", employeeData.name);
-    formData.append("department", employeeData.department);
-    formData.append("designation", employeeData.designation);
+    formData.append("name", employeeData.name || "");
+    formData.append("department", employeeData.department || "");
+    formData.append("designation", employeeData.designation || "");
     formData.append("reason", reason);
     formData.append("startDate", startDate);
     formData.append("endDate", endDate);
     formData.append("contact", contact);
 
-    // TA-specific
     formData.append("travelDate", travelDate);
     formData.append("distance", distance);
     formData.append("taAmount", taAmount);
     formData.append("travelMode", travelMode);
 
-    // append new files
-    file.filter((f) => !f.isServerFile).forEach((f) => formData.append("files", f));
-    const retainedFiles = file.filter((f) => f.isServerFile).map((f) => f.name).join(";");
+    file
+      .filter((f) => !f.isServerFile)
+      .forEach((f) => formData.append("files", f));
+
+    const retainedFiles = file
+      .filter((f) => f.isServerFile)
+      .map((f) => f.name)
+      .join(";");
+
     formData.append("retainedFiles", retainedFiles);
 
-    const ApplnNo = editingIndex !== null ? applications[editingIndex].ApplnNo : `TA-${Date.now()}`;
+    const ApplnNo =
+      editingIndex !== null
+        ? applications[editingIndex].ApplnNo
+        : `TA-${Date.now()}`;
     formData.append("ApplnNo", ApplnNo);
 
     try {
-      const url = editingIndex !== null
-        ? `http://localhost:8080/api/ta/update/${ApplnNo}`
-        : "http://localhost:8080/api/ta/submit";
+      const url =
+        editingIndex !== null
+          ? `${API_BASE}/api/ta/update/${ApplnNo}`
+          : `${API_BASE}/api/ta/submit`;
       const method = editingIndex !== null ? "PUT" : "POST";
 
       const res = await fetch(url, { method, body: formData });
 
-      if (res.status === 409) {
-        const msg = await res.text();
-        alert(msg);
+      console.log("TA submit status:", res.status);
+
+      if (res.status === 400) {
+        const data = await res.json().catch(() => ({}));
+        const fieldErrors = data.fieldErrors || {};
+        setErrors(fieldErrors);
+        setSubmitAttempted(true);
+        showToast(data.message || "Validation error from server.", "error");
         return;
       }
 
-      if (res.ok) {
-        const newApp = {
-          ApplnNo,
-          empId: employeeData.empId,
-          name: employeeData.name,
-          department: employeeData.department,
-          designation: employeeData.designation,
-          reason,
-          startDate,
-          endDate,
-          contact,
-          applicationType,
-          travelDate,
-          distance,
-          taAmount,
-          travelMode,
-          files: file.map((f) => ({ name: f.name, type: f.type || "server-file" })),
-        };
-
-        if (editingIndex !== null) {
-          const updated = [...applications];
-          updated[editingIndex] = newApp;
-          setApplications(updated);
-          setEditingIndex(null);
-          setSuccessMessage("TA application updated!");
-        } else {
-          setApplications((prev) => [...prev, newApp]);
-          setSuccessMessage("TA application submitted!");
-        }
-
-        setTimeout(() => setSuccessMessage(""), 5000);
-
-        // reset
-        setEmployeeId("");
-        setEmployeeData({});
-        setReason("");
-        setContact("");
-        setStartDate("");
-        setEndDate("");
-        setFile([]);
-        setTravelDate("");
-        setDistance("");
-        setTaAmount("");
-        setTravelMode("");
-        setErrors({});
-        setSubmitAttempted(false);
-      } else {
-        alert("Failed to submit TA application.");
+      if (res.status === 409) {
+        const msg = await res.text();
+        showToast(msg || "Duplicate TA application.", "error");
+        return;
       }
+
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        console.error("Backend error body:", msg);
+        showToast(
+          msg || `Failed to submit TA application. Status: ${res.status}`,
+          "error"
+        );
+        return;
+      }
+
+      await loadTAApplications(employeeData.empId || employeeId);
+
+      if (editingIndex !== null) {
+        setEditingIndex(null);
+        showToast("TA application updated successfully!", "success");
+      } else {
+        showToast("TA application submitted successfully!", "success");
+      }
+
+      // reset (keep user)
+      setReason("");
+      setStartDate("");
+      setEndDate("");
+      setTravelDate("");
+      setDistance("");
+      setTaAmount("");
+      setTravelMode("");
+      setFile([]);
+      setErrors({});
+      setSubmitAttempted(false);
     } catch (err) {
       console.error("Error submitting TA:", err);
-      alert("Server error.");
+      showToast("Server error while submitting TA.", "error");
     }
   };
 
+  // -------- Edit handler --------
   const handleEdit = async (index) => {
     const app = applications[index];
 
@@ -218,45 +295,216 @@ function TAApplication() {
       department: app.department,
       designation: app.designation,
     });
-    setReason(app.reason);
-    setStartDate(app.startDate);
-    setEndDate(app.endDate);
-    setContact(app.contact);
+    setReason(app.reason || "");
+    setStartDate(app.startDate || "");
+    setEndDate(app.endDate || "");
+    setContact(app.contact || "");
     setTravelDate(app.travelDate || "");
     setDistance(app.distance || "");
     setTaAmount(app.taAmount || "");
     setTravelMode(app.travelMode || "");
     setEditingIndex(index);
+    setErrors({});
+    setSubmitAttempted(false);
 
     try {
-      const res = await fetch(`http://localhost:8080/api/ta/ApplnNo/${app.ApplnNo}`);
+      const res = await fetch(`${API_BASE}/api/ta/ApplnNo/${app.ApplnNo}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.fileName) {
-          const filesFromServer = data.fileName.split(";").filter(Boolean).map((name) => ({
-            name,
-            url: `http://localhost:8080/uploads/${data.applicationType}/${data.empId}/${name}`,
-            isServerFile: true,
-          }));
-          setFile(filesFromServer);
-        } else {
-          setFile([]);
-        }
+        const filesFromServer = buildFilesFromServer(
+          data.fileName,
+          data.applicationType,
+          data.empId
+        );
+        setFile(filesFromServer);
+      } else {
+        setFile([]);
+        showToast("Failed to load attachments for this application.", "error");
       }
     } catch (err) {
       console.error("Error fetching TA files:", err);
+      setFile([]);
+      showToast("Server error while loading attachments.", "error");
     }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // -------- Filter + Sort --------
+  const filteredApplications = applications.filter((app) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (app.ApplnNo || "").toLowerCase().includes(term) ||
+      (app.empId || "").toLowerCase().includes(term) ||
+      (app.name || "").toLowerCase().includes(term) ||
+      (app.travelMode || "").toLowerCase().includes(term) ||
+      (app.travelDate || "").toLowerCase().includes(term)
+    );
+  });
+
+  const sortedApplications = [...filteredApplications].sort((a, b) => {
+    const field = sortField;
+
+    if (field === "distance" || field === "taAmount") {
+      const an = parseFloat(a[field]) || 0;
+      const bn = parseFloat(b[field]) || 0;
+      return sortDirection === "asc" ? an - bn : bn - an;
+    }
+
+    const av = (a[field] || "").toString().toLowerCase();
+    const bv = (b[field] || "").toString().toLowerCase();
+
+    if (av < bv) return sortDirection === "asc" ? -1 : 1;
+    if (av > bv) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // -------- Export helpers --------
+  const exportToExcel = (apps) => {
+    const headers = [
+      "ApplnNo",
+      "Emp ID",
+      "Name",
+      "Travel Date",
+      "Distance",
+      "TA Amount",
+      "Travel Mode",
+      "Files",
+    ];
+
+    const rows = apps.map((app) => [
+      app.ApplnNo || "",
+      app.empId || "",
+      app.name || "",
+      app.travelDate || "",
+      app.distance || "",
+      app.taAmount || "",
+      app.travelMode || "",
+      app.files && app.files.length
+        ? app.files.map((f) => f.name).join("; ")
+        : "",
+    ]);
+
+    const escapeCsv = (value) => {
+      const v = value == null ? "" : String(value);
+      if (v.includes('"') || v.includes(",") || v.includes("\n")) {
+        return `"${v.replace(/"/g, '""')}"`;
+      }
+      return v;
+    };
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map(escapeCsv).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ta_applications.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = (apps) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      showToast("Popup blocked. Allow popups to export as PDF.", "error");
+      return;
+    }
+
+    const headerHtml = `
+      <tr>
+        <th>ApplnNo</th>
+        <th>Emp ID</th>
+        <th>Name</th>
+        <th>Travel Date</th>
+        <th>Distance</th>
+        <th>TA Amount</th>
+        <th>Travel Mode</th>
+        <th>Files</th>
+      </tr>
+    `;
+
+    const rowsHtml = apps
+      .map(
+        (app) => `
+      <tr>
+        <td>${app.ApplnNo || ""}</td>
+        <td>${app.empId || ""}</td>
+        <td>${app.name || ""}</td>
+        <td>${app.travelDate || ""}</td>
+        <td>${app.distance || ""}</td>
+        <td>${app.taAmount || ""}</td>
+        <td>${app.travelMode || ""}</td>
+        <td>${
+          app.files && app.files.length
+            ? app.files.map((f) => f.name).join("; ")
+            : ""
+        }</td>
+      </tr>
+    `
+      )
+      .join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>TA Applications</title>
+          <style>
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #333; padding: 4px; font-size: 12px; }
+            th { background: #eee; }
+          </style>
+        </head>
+        <body>
+          <h3>TA Applications</h3>
+          <table>
+            <thead>${headerHtml}</thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const handleExport = (format) => {
+    if (!sortedApplications.length) {
+      showToast("No data to export.", "info");
+      return;
+    }
+    if (format === "excel") {
+      exportToExcel(sortedApplications);
+      showToast("Exported to Excel.", "success");
+    } else {
+      exportToPDF(sortedApplications);
+      showToast("Export opened for PDF printing.", "success");
+    }
   };
 
   return (
     <>
+      {message && (
+        <div className={`toast toast-${messageType}`}>{message}</div>
+      )}
+
       <div className="ta-container">
         <h2>TA Application</h2>
 
-        {successMessage && <div className="success-message">{successMessage}</div>}
-
         <form onSubmit={handleSubmit}>
+          {/* Employee ID */}
           <div className="form-row">
             <label>Employee ID:</label>
             <input
@@ -264,91 +512,358 @@ function TAApplication() {
               value={employeeId}
               readOnly
               placeholder="Employee ID"
-              className={getInputClass("employeeId")}
+              className={getInputClass("empId")}
             />
+            {submitAttempted && errors.empId && (
+              <div className="field-error-text">{errors.empId}</div>
+            )}
           </div>
 
+          {/* Application Type */}
           <div className="form-row">
             <label>Application Type:</label>
             <input type="text" value={applicationType.toUpperCase()} readOnly />
           </div>
 
-          <div className="form-row"><label>Name:</label><input type="text" value={employeeData.name || ""} readOnly /></div>
-          <div className="form-row"><label>Department:</label><input type="text" value={employeeData.department || ""} readOnly /></div>
-          <div className="form-row"><label>Designation:</label><input type="text" value={employeeData.designation || ""} readOnly /></div>
-
-          <div className="form-row"><label>Reason:</label>
-            <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} className={getInputClass("reason")} />
-          </div>
-
-          <div className="form-row"><label>Start Date:</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={getInputClass("startDate")} />
-          </div>
-
-          <div className="form-row"><label>End Date:</label>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={getInputClass("endDate")} />
+          {/* Name */}
+          <div className="form-row">
+            <label>Name:</label>
+            <input type="text" value={employeeData.name || ""} readOnly />
           </div>
 
           <div className="form-row">
+            <label>Department:</label>
+            <input type="text" value={employeeData.department || ""} readOnly />
+          </div>
+
+          <div className="form-row">
+            <label>Designation:</label>
+            <input
+              type="text"
+              value={employeeData.designation || ""}
+              readOnly
+            />
+          </div>
+
+          {/* Reason */}
+          <div className="form-row">
+            <label>Reason:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={reason}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setReason(value);
+                  setErrors((prev) => {
+                    if (!prev.reason) return prev;
+                    const u = { ...prev };
+                    delete u.reason;
+                    return u;
+                  });
+                }}
+                className={getInputClass("reason")}
+              />
+              {submitAttempted && errors.reason && (
+                <div className="field-error-text">{errors.reason}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Start Date */}
+          <div className="form-row">
+            <label>Start Date:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setStartDate(value);
+                  setErrors((prev) => {
+                    if (!prev.startDate) return prev;
+                    const u = { ...prev };
+                    delete u.startDate;
+                    return u;
+                  });
+                }}
+                className={getInputClass("startDate")}
+              />
+              {submitAttempted && errors.startDate && (
+                <div className="field-error-text">{errors.startDate}</div>
+              )}
+            </div>
+          </div>
+
+          {/* End Date */}
+          <div className="form-row">
+            <label>End Date:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEndDate(value);
+                  setErrors((prev) => {
+                    if (!prev.endDate) return prev;
+                    const u = { ...prev };
+                    delete u.endDate;
+                    return u;
+                  });
+                }}
+                className={getInputClass("endDate")}
+                min={startDate || ""}
+              />
+              {submitAttempted && errors.endDate && (
+                <div className="field-error-text">{errors.endDate}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div className="form-row">
             <label>Contact:</label>
-            <div className="phone-input">
+            <div className="phone-input" style={{ flex: 2 }}>
               <span>+91</span>
               <input
                 type="text"
                 value={contact}
-                onChange={(e) =>
-                  setContact(e.target.value.replace(/\D/g, "").slice(0, 10))
-                }
+                onChange={(e) => {
+                  const cleaned = e.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 10);
+                  setContact(cleaned);
+                  setErrors((prev) => {
+                    if (!prev.contact) return prev;
+                    const u = { ...prev };
+                    delete u.contact;
+                    return u;
+                  });
+                }}
                 className={getInputClass("contact")}
               />
             </div>
+            {submitAttempted && errors.contact && (
+              <div className="field-error-text">{errors.contact}</div>
+            )}
           </div>
 
           {/* TA specific fields */}
-          <div className="form-row"><label>Travel Date:</label>
-            <input type="date" value={travelDate} onChange={(e) => setTravelDate(e.target.value)} className={getInputClass("travelDate")} />
-          </div>
-
-          <div className="form-row"><label>Distance (km):</label>
-            <input type="text" value={distance} onChange={(e) => setDistance(e.target.value.replace(/[^\d.]/g, ""))} className={getInputClass("distance")} />
-          </div>
-
-          <div className="form-row"><label>TA Amount:</label>
-            <input type="text" value={taAmount} onChange={(e) => setTaAmount(e.target.value.replace(/[^\d.]/g, ""))} className={getInputClass("taAmount")} />
-          </div>
-
-          <div className="form-row"><label>Travel Mode:</label>
-            <input type="text" value={travelMode} onChange={(e) => setTravelMode(e.target.value)} className={getInputClass("travelMode")} />
-          </div>
-
-          <div className="form-row attach-row">
-            <label>Attachments:</label>
-            <div className="attach-section">
-              <AttachFile files={file} onChange={(newFiles) => setFile(newFiles)} required={true} maxFiles={5} label="Attach File" />
+          <div className="form-row">
+            <label>Travel Date:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="date"
+                value={travelDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setTravelDate(value);
+                  setErrors((prev) => {
+                    if (!prev.travelDate) return prev;
+                    const u = { ...prev };
+                    delete u.travelDate;
+                    return u;
+                  });
+                }}
+                className={getInputClass("travelDate")}
+              />
+              {submitAttempted && errors.travelDate && (
+                <div className="field-error-text">{errors.travelDate}</div>
+              )}
             </div>
           </div>
 
+          <div className="form-row">
+            <label>Distance (km):</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={distance}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d.]/g, "");
+                  setDistance(value);
+                  setErrors((prev) => {
+                    if (!prev.distance) return prev;
+                    const u = { ...prev };
+                    delete u.distance;
+                    return u;
+                  });
+                }}
+                className={getInputClass("distance")}
+              />
+              {submitAttempted && errors.distance && (
+                <div className="field-error-text">{errors.distance}</div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row">
+            <label>TA Amount:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={taAmount}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d.]/g, "");
+                  setTaAmount(value);
+                  setErrors((prev) => {
+                    if (!prev.taAmount) return prev;
+                    const u = { ...prev };
+                    delete u.taAmount;
+                    return u;
+                  });
+                }}
+                className={getInputClass("taAmount")}
+              />
+              {submitAttempted && errors.taAmount && (
+                <div className="field-error-text">{errors.taAmount}</div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row">
+            <label>Travel Mode:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={travelMode}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setTravelMode(value);
+                  setErrors((prev) => {
+                    if (!prev.travelMode) return prev;
+                    const u = { ...prev };
+                    delete u.travelMode;
+                    return u;
+                  });
+                }}
+                className={getInputClass("travelMode")}
+              />
+              {submitAttempted && errors.travelMode && (
+                <div className="field-error-text">{errors.travelMode}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Attach File */}
+          <div className="form-row attach-row">
+            <label>Attachments:</label>
+            <div
+              className={
+                "attach-section" +
+                (submitAttempted && errors.files ? " input-error" : "")
+              }
+            >
+              <AttachFile
+                files={file}
+                onChange={(newFiles) => {
+                  setFile(newFiles);
+                  setErrors((prev) => {
+                    if (!prev.files) return prev;
+                    const u = { ...prev };
+                    delete u.files;
+                    return u;
+                  });
+                }}
+                required={true}
+                maxFiles={5}
+                label="Attach File"
+              />
+              {submitAttempted && errors.files && (
+                <div className="field-error-text">{errors.files}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Buttons */}
           <div className="button-row">
-            <button type="submit" className="submit-btn">{editingIndex !== null ? "Update" : "Submit"}</button>
-            <button type="button" className="reset-btn" onClick={() => {
-              setEmployeeId(""); setEmployeeData({}); setReason(""); setContact(""); setStartDate(""); setEndDate("");
-              setFile([]); setTravelDate(""); setDistance(""); setTaAmount(""); setTravelMode(""); setEditingIndex(null);
-              setErrors({}); setSubmitAttempted(false); setSuccessMessage("");
-            }}>Reset</button>
+            <button type="submit" className="submit-btn">
+              {editingIndex !== null ? "Update" : "Submit"}
+            </button>
+            <button
+              type="button"
+              className="reset-btn"
+              onClick={() => {
+                setReason("");
+                setStartDate("");
+                setEndDate("");
+                setTravelDate("");
+                setDistance("");
+                setTaAmount("");
+                setTravelMode("");
+                setFile([]);
+                setEditingIndex(null);
+                setErrors({});
+                setSubmitAttempted(false);
+                showToast("Form reset.", "info");
+              }}
+            >
+              Reset
+            </button>
           </div>
         </form>
       </div>
 
+      {/* Table */}
       {applications.length > 0 && (
         <div className="submitted-section-wrapper">
           <div className="submitted-section">
             <h3>Submitted TA Applications</h3>
+
+            <div className="table-controls">
+              <div className="table-control-item">
+                <label>Search:&nbsp;</label>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by ApplnNo, Emp ID, Name, Mode, Date"
+                />
+              </div>
+
+              <div className="table-control-item">
+                <label>Sort by:&nbsp;</label>
+                <select
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value)}
+                >
+                  <option value="ApplnNo">Application No</option>
+                  <option value="name">Name</option>
+                  <option value="travelDate">Travel Date</option>
+                  <option value="distance">Distance</option>
+                  <option value="taAmount">TA Amount</option>
+                </select>
+                <button
+                  type="button"
+                  className="sort-direction-btn"
+                  onClick={() =>
+                    setSortDirection((prev) =>
+                      prev === "asc" ? "desc" : "asc"
+                    )
+                  }
+                >
+                  {sortDirection === "asc" ? "⬆️ Asc" : "⬇️ Desc"}
+                </button>
+              </div>
+            </div>
+
             <table className="applications-table">
               <thead>
-                <tr><th>ApplnNo</th><th>Emp ID</th><th>Name</th><th>Travel Date</th><th>Distance</th><th>TA Amount</th><th>Files</th><th>Action</th></tr>
+                <tr>
+                  <th>ApplnNo</th>
+                  <th>Emp ID</th>
+                  <th>Name</th>
+                  <th>Travel Date</th>
+                  <th>Distance</th>
+                  <th>TA Amount</th>
+                  <th>Travel Mode</th>
+                  <th>Files</th>
+                  <th>Action</th>
+                </tr>
               </thead>
               <tbody>
-                {applications.map((app, idx) => (
+                {sortedApplications.map((app, idx) => (
                   <tr key={app.ApplnNo}>
                     <td>{app.ApplnNo}</td>
                     <td>{app.empId}</td>
@@ -356,12 +871,57 @@ function TAApplication() {
                     <td>{app.travelDate}</td>
                     <td>{app.distance}</td>
                     <td>{app.taAmount}</td>
-                    <td>{app.files?.map((f,i)=> <div key={i}>{f.name}</div>)}</td>
-                    <td><button className="edit-btn" onClick={()=>handleEdit(idx)}>Edit</button></td>
+                    <td>{app.travelMode}</td>
+                    <td>
+                      {app.files && app.files.length > 0 ? (
+                        app.files.map((f, i) => {
+                          const url = `${API_BASE}/uploads/${app.applicationType}/${app.empId}/${f.name}`;
+                          return (
+                            <div key={i}>
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {f.name}
+                              </a>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        className="edit-btn"
+                        onClick={() => handleEdit(idx)}
+                      >
+                        Edit
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            <div className="export-row">
+              <span>Export:&nbsp;</span>
+              <button
+                type="button"
+                className="export-btn"
+                onClick={() => handleExport("excel")}
+              >
+                Export to Excel
+              </button>
+              <button
+                type="button"
+                className="export-btn"
+                onClick={() => handleExport("pdf")}
+              >
+                Export to PDF
+              </button>
+            </div>
           </div>
         </div>
       )}

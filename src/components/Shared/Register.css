@@ -261,3 +261,31 @@
     padding: 20px;
   }
 }
+.empid-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.empid-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: #fff;
+}
+
+.empid-prefix {
+  font-weight: 600;
+  margin-right: 4px;
+  color: #333;
+  white-space: nowrap;
+}
+
+.empid-input input {
+  border: none;
+  outline: none;
+  width: 70px;
+  font-size: 14px;
+}

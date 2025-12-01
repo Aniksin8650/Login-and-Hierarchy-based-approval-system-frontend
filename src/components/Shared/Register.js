@@ -1,8 +1,15 @@
 import React, { useState } from "react";
 import "./Register.css";
 
+const buildEmpId = (digits) => {
+  const clean = (digits || "").replace(/\D/g, "");
+  if (!clean) return "";
+  const padded = clean.padStart(3, "0").slice(-3);
+  return "EMP" + padded;
+};
+
 function Register() {
-  const [empId, setEmpId] = useState("");
+  const [empId, setEmpId] = useState(""); // only digits like "2", "12", "007"
   const [employeeData, setEmployeeData] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -17,15 +24,17 @@ function Register() {
   };
 
   const fetchEmployee = async () => {
-    const id = empId.trim();
-    if (!id) {
+    const fullId = buildEmpId(empId).trim();
+    if (!fullId) {
       setEmployeeData(null);
       showToast("Please enter Employee ID", "error");
       return;
     }
 
     try {
-      const res = await fetch(`http://localhost:8080/api/employees/id/${id}`);
+      const res = await fetch(
+        `http://localhost:8080/api/employees/id/${fullId}`
+      );
       if (!res.ok) {
         setEmployeeData(null);
         showToast("Employee not found", "error");
@@ -58,12 +67,18 @@ function Register() {
       return;
     }
 
+    const fullId = buildEmpId(empId);
+    if (!fullId) {
+      showToast("Please enter Employee ID", "error");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("http://localhost:8080/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ empId, password: newPassword }),
+        body: JSON.stringify({ empId: fullId, password: newPassword }),
       });
 
       const text = await res.text();
@@ -85,9 +100,7 @@ function Register() {
   return (
     <div className="register-page">
       {message && (
-        <div className={`toast toast-${messageType}`}>
-          {message}
-        </div>
+        <div className={`toast toast-${messageType}`}>{message}</div>
       )}
 
       <div className="register-card">
@@ -97,7 +110,8 @@ function Register() {
           </div>
           <h1 className="auth-title">Create Your Account</h1>
           <p className="auth-subtitle">
-            Link your employee profile and set your password to access all modules.
+            Link your employee profile and set your password to access all
+            modules.
           </p>
         </div>
 
@@ -107,12 +121,19 @@ function Register() {
           <form className="register-form" onSubmit={handleRegister}>
             <label>Employee ID</label>
             <div className="empid-row">
-              <input
-                type="text"
-                value={empId}
-                onChange={(e) => setEmpId(e.target.value)}
-                placeholder="Enter Employee ID"
-              />
+              <div className="empid-input">
+                <span className="empid-prefix">EMP-</span>
+                <input
+                  type="text"
+                  value={empId}
+                  onChange={(e) =>
+                    setEmpId(
+                      e.target.value.replace(/\D/g, "").slice(0, 3)
+                    )
+                  }
+                  placeholder="001"
+                />
+              </div>
               <button
                 type="button"
                 className="fetch-btn"
@@ -124,11 +145,21 @@ function Register() {
 
             {employeeData && (
               <div className="employee-preview">
-                <p><strong>Name:</strong> {employeeData.name}</p>
-                <p><strong>Department:</strong> {employeeData.department}</p>
-                <p><strong>Designation:</strong> {employeeData.designation}</p>
-                <p><strong>Phone:</strong> {employeeData.phone}</p>
-                <p><strong>Role:</strong> {employeeData.role}</p>
+                <p>
+                  <strong>Name:</strong> {employeeData.name}
+                </p>
+                <p>
+                  <strong>Department:</strong> {employeeData.department}
+                </p>
+                <p>
+                  <strong>Designation:</strong> {employeeData.designation}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {employeeData.phone}
+                </p>
+                <p>
+                  <strong>Role:</strong> {employeeData.role}
+                </p>
               </div>
             )}
 

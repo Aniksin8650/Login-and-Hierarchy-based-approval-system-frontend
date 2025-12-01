@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./DAApplication.css";
 import "../Shared/AttachFile.css";
 import { useLocation } from "react-router-dom";
-// import { useNavigate } from "react-router-dom";
 
 import AttachFile from "../Shared/AttachFile";
 
 function DAApplication() {
   const location = useLocation();
   const { applicationType } = location.state || { applicationType: "da" };
-  // const navigate = useNavigate();
 
   const [employeeId, setEmployeeId] = useState("");
   const [employeeData, setEmployeeData] = useState({});
@@ -26,177 +24,463 @@ function DAApplication() {
 
   const [errors, setErrors] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const [applications, setApplications] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
 
-  const loadUserFromLocal = () => {
+  // table controls
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("ApplnNo");
+  const [sortDirection, setSortDirection] = useState("asc");
+
+  // Toast
+  const [message, setMessage] = useState(null);
+  const [messageType, setMessageType] = useState("info");
+
+  const API_BASE =
+    process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
+
+  const showToast = (msg, type = "info") => {
+    setMessage(msg);
+    setMessageType(type);
+    setTimeout(() => setMessage(null), 4000);
+  };
+
+  // --------------------------------------------------------------------
+  // Load all DA applications for an employee
+  // --------------------------------------------------------------------
+  const loadDaApplications = useCallback(
+    async (empId) => {
+      if (!empId) return;
       try {
-        const stored = localStorage.getItem("userInfo");
-        if (!stored) return;
-  
-        const u = JSON.parse(stored);
-  
-        const empId = u.empId || "";
-        const name = u.name || "";
-        const department = u.department || "";
-        const designation = u.designation || "";
-        const rawPhone = u.phone ? String(u.phone) : "";
-        const cleanedPhone = rawPhone.replace(/\D/g, "").slice(0, 10);
-  
-        setEmployeeId(empId);
-        setEmployeeData({
-          empId,
-          name,
-          department,
-          designation,
-        });
-        setContact(cleanedPhone);
+        const res = await fetch(`${API_BASE}/api/da/empId/${empId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = Array.isArray(data)
+            ? data.map((d) => ({
+                ApplnNo: d.applnNo || d.ApplnNo,
+                empId: d.empId,
+                name: d.name,
+                department: d.department,
+                designation: d.designation,
+                reason: d.reason,
+                startDate: d.startDate,
+                endDate: d.endDate,
+                contact: d.contact,
+                applicationType: d.applicationType,
+                billDate: d.billDate,
+                billAmount: d.billAmount,
+                purpose: d.purpose,
+                files: d.fileName
+                  ? d.fileName
+                      .split(";")
+                      .filter(Boolean)
+                      .map((name) => ({ name }))
+                  : [],
+              }))
+            : [];
+          setApplications(mapped);
+        } else {
+          setApplications([]);
+          showToast("Failed to load DA applications.", "error");
+        }
       } catch (err) {
-        console.error("Failed to load userInfo from localStorage:", err);
+        console.error("Error loading DA applications:", err);
+        setApplications([]);
+        showToast("Server error while loading DA applications.", "error");
       }
-    };
-  
-    useEffect(() => {
-      loadUserFromLocal();
-    }, []);
+    },
+    [API_BASE]
+  );
 
-  // const fetchEmployeeDetails = async () => {
-  //   const id = employeeId.trim();
-  //   if (!id) { setEmployeeData({}); return; }
-  //   try {
-  //     const res = await fetch(`http://localhost:8080/api/employees/id/${id}`);
-  //     if (res.ok) { const data = await res.json(); setEmployeeData(data); } else setEmployeeData({});
-  //   } catch (err) { console.error("Error fetching employee:", err); setEmployeeData({}); }
-  // };
+  // --------------------------------------------------------------------
+  // Load logged-in user from localStorage
+  // --------------------------------------------------------------------
+  const loadUserFromLocal = useCallback(() => {
+    try {
+      const stored = localStorage.getItem("userInfo");
+      if (!stored) return;
 
-  const getInputClass = (field) => submitAttempted && errors[field] ? "input-error" : "";
+      const u = JSON.parse(stored);
 
+      const empId = u.empId || "";
+      const name = u.name || "";
+      const department = u.department || "";
+      const designation = u.designation || "";
+      const rawPhone = u.phone ? String(u.phone) : "";
+      const cleanedPhone = rawPhone.replace(/\D/g, "").slice(0, 10);
+
+      setEmployeeId(empId);
+      setEmployeeData({
+        empId,
+        name,
+        department,
+        designation,
+      });
+      setContact(cleanedPhone);
+
+      loadDaApplications(empId);
+    } catch (err) {
+      console.error("Failed to load userInfo from localStorage:", err);
+      showToast("Error reading user info. Please relogin.", "error");
+    }
+  }, [loadDaApplications]);
+
+  useEffect(() => {
+    loadUserFromLocal();
+  }, [loadUserFromLocal]);
+
+  const getInputClass = (field) =>
+    submitAttempted && errors[field] ? "input-error" : "";
+
+  // --------------------------------------------------------------------
+  // Submit handler
+  // --------------------------------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitAttempted(true);
     const newErrors = {};
 
-    if (!employeeId.trim()) newErrors.employeeId = true;
-    if (!employeeData || !employeeData.empId) newErrors.employeeId = true;
-    if (!reason.trim()) newErrors.reason = true;
-    if (!startDate) newErrors.startDate = true;
-    if (!endDate) newErrors.endDate = true;
-    if (startDate && endDate && new Date(endDate) < new Date(startDate))
-      newErrors.endDate = true;
-    if (!contact || contact.length !== 10) newErrors.contact = true;
-    if (!file || file.length === 0) newErrors.file = true;
+    // basic validation
+    if (!employeeId.trim() || !employeeData || !employeeData.empId) {
+      newErrors.empId = "Employee ID is required";
+    }
+    if (!reason.trim()) {
+      newErrors.reason = "Reason is required";
+    }
+    if (!startDate) {
+      newErrors.startDate = "Start date is required";
+    }
+    if (!endDate) {
+      newErrors.endDate = "End date is required";
+    } else if (startDate && new Date(endDate) < new Date(startDate)) {
+      newErrors.endDate = "End date cannot be before start date";
+    }
+    if (!contact || contact.length !== 10) {
+      newErrors.contact = "Contact must be 10 digits";
+    }
+    if (!file || file.length === 0) {
+      newErrors.files = "At least one attachment is required";
+    }
 
     // DA-specific
-    if (!billDate) newErrors.billDate = true;
-    if (!billAmount || isNaN(parseFloat(billAmount))) newErrors.billAmount = true;
-    if (!purpose.trim()) newErrors.purpose = true;
+    if (!billDate) {
+      newErrors.billDate = "Bill date is required";
+    }
+    if (!billAmount || isNaN(parseFloat(billAmount))) {
+      newErrors.billAmount = "Bill amount must be a valid number";
+    }
+    if (!purpose.trim()) {
+      newErrors.purpose = "Purpose is required";
+    }
 
     setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) { alert("Please fix errors before submitting."); return; }
+    if (Object.keys(newErrors).length > 0) {
+      showToast("Please fix errors before submitting.", "error");
+      return;
+    }
 
     const formData = new FormData();
-    formData.append("empId", employeeData.empId);
+    formData.append("empId", employeeData.empId || employeeId);
     formData.append("applicationType", applicationType);
-    formData.append("name", employeeData.name);
-    formData.append("department", employeeData.department);
-    formData.append("designation", employeeData.designation);
+    formData.append("name", employeeData.name || "");
+    formData.append("department", employeeData.department || "");
+    formData.append("designation", employeeData.designation || "");
     formData.append("reason", reason);
     formData.append("startDate", startDate);
     formData.append("endDate", endDate);
     formData.append("contact", contact);
 
-    // DA-specific
     formData.append("billDate", billDate);
     formData.append("billAmount", billAmount);
     formData.append("purpose", purpose);
 
-    file.filter((f) => !f.isServerFile).forEach((f) => formData.append("files", f));
-    const retainedFiles = file.filter((f) => f.isServerFile).map((f) => f.name).join(";");
+    file
+      .filter((f) => !f.isServerFile)
+      .forEach((f) => formData.append("files", f));
+
+    const retainedFiles = file
+      .filter((f) => f.isServerFile)
+      .map((f) => f.name)
+      .join(";");
     formData.append("retainedFiles", retainedFiles);
 
-    const ApplnNo = editingIndex !== null ? applications[editingIndex].ApplnNo : `DA-${Date.now()}`;
+    const ApplnNo =
+      editingIndex !== null
+        ? applications[editingIndex].ApplnNo
+        : `DA-${Date.now()}`;
     formData.append("ApplnNo", ApplnNo);
 
     try {
-      const url = editingIndex !== null ? `http://localhost:8080/api/da/update/${ApplnNo}` : "http://localhost:8080/api/da/submit";
+      const url =
+        editingIndex !== null
+          ? `${API_BASE}/api/da/update/${ApplnNo}`
+          : `${API_BASE}/api/da/submit`;
       const method = editingIndex !== null ? "PUT" : "POST";
       const res = await fetch(url, { method, body: formData });
 
-      if (res.status === 409) { const msg = await res.text(); alert(msg); return; }
+      if (res.status === 400) {
+        const data = await res.json().catch(() => ({}));
+        const fieldErrors = data.fieldErrors || {};
+        setErrors(fieldErrors);
+        setSubmitAttempted(true);
+        showToast(data.message || "Validation error from server.", "error");
+        return;
+      }
 
-      if (res.ok) {
-        const newApp = {
-          ApplnNo,
-          empId: employeeData.empId,
-          name: employeeData.name,
-          department: employeeData.department,
-          designation: employeeData.designation,
-          reason,
-          startDate,
-          endDate,
-          contact,
-          applicationType,
-          billDate,
-          billAmount,
-          purpose,
-          files: file.map((f) => ({ name: f.name, type: f.type || "server-file" })),
-        };
+      if (res.status === 409) {
+        const msg = await res.text();
+        showToast(msg || "Duplicate DA application.", "error");
+        return;
+      }
 
-        if (editingIndex !== null) {
-          const updated = [...applications]; updated[editingIndex] = newApp; setApplications(updated); setEditingIndex(null); setSuccessMessage("DA application updated!");
-        } else { setApplications((prev) => [...prev, newApp]); setSuccessMessage("DA application submitted!"); }
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        console.error("Backend error body:", msg);
+        showToast(
+          msg || `Failed to submit DA application. Status: ${res.status}`,
+          "error"
+        );
+        return;
+      }
 
-        setTimeout(() => setSuccessMessage(""), 5000);
+      const empIdToReload = employeeData.empId || employeeId;
+      await loadDaApplications(empIdToReload);
 
-        setEmployeeId(""); setEmployeeData({}); setReason(""); setContact(""); setStartDate(""); setEndDate("");
-        setFile([]); setBillDate(""); setBillAmount(""); setPurpose(""); setErrors({}); setSubmitAttempted(false);
-      } else { alert("Failed to submit DA application."); }
+      if (editingIndex !== null) {
+        setEditingIndex(null);
+        showToast("DA application updated successfully!", "success");
+      } else {
+        showToast("DA application submitted successfully!", "success");
+      }
+
+      // Reset form (but keep user info from localStorage)
+      setReason("");
+      setContact("");
+      setStartDate("");
+      setEndDate("");
+      setFile([]);
+      setBillDate("");
+      setBillAmount("");
+      setPurpose("");
+      setErrors({});
+      setSubmitAttempted(false);
     } catch (err) {
       console.error("Error submitting DA:", err);
-      alert("Server error.");
+      showToast("Server error while submitting DA.", "error");
     }
   };
 
+  // --------------------------------------------------------------------
+  // Edit handler
+  // --------------------------------------------------------------------
   const handleEdit = async (index) => {
     const app = applications[index];
     setEmployeeId(app.empId);
-    setEmployeeData({ empId: app.empId, name: app.name, department: app.department, designation: app.designation });
-    setReason(app.reason);
-    setStartDate(app.startDate);
-    setEndDate(app.endDate);
-    setContact(app.contact);
+    setEmployeeData({
+      empId: app.empId,
+      name: app.name,
+      department: app.department,
+      designation: app.designation,
+    });
+    setReason(app.reason || "");
+    setStartDate(app.startDate || "");
+    setEndDate(app.endDate || "");
+    setContact(app.contact || "");
     setBillDate(app.billDate || "");
     setBillAmount(app.billAmount || "");
     setPurpose(app.purpose || "");
     setEditingIndex(index);
+    setErrors({});
+    setSubmitAttempted(false);
 
     try {
-      const res = await fetch(`http://localhost:8080/api/da/ApplnNo/${app.ApplnNo}`);
+      const res = await fetch(`${API_BASE}/api/da/ApplnNo/${app.ApplnNo}`);
       if (res.ok) {
         const data = await res.json();
         if (data.fileName) {
-          const filesFromServer = data.fileName.split(";").filter(Boolean).map((name) => ({
-            name,
-            url: `http://localhost:8080/uploads/${data.applicationType}/${data.empId}/${name}`,
-            isServerFile: true,
-          }));
+          const filesFromServer = data.fileName
+            .split(";")
+            .filter(Boolean)
+            .map((name) => ({
+              name,
+              url: `${API_BASE}/uploads/${data.applicationType}/${data.empId}/${name}`,
+              isServerFile: true,
+            }));
           setFile(filesFromServer);
         } else setFile([]);
+      } else {
+        setFile([]);
+        showToast("Failed to load attachments for this application.", "error");
       }
-    } catch (err) { console.error("Error fetching DA files:", err); }
+    } catch (err) {
+      console.error("Error fetching DA files:", err);
+      setFile([]);
+      showToast("Server error while loading attachments.", "error");
+    }
+
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ------- table filter + sort -------
+  const filteredApplications = applications.filter((app) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (app.ApplnNo || "").toLowerCase().includes(term) ||
+      (app.empId || "").toLowerCase().includes(term) ||
+      (app.name || "").toLowerCase().includes(term) ||
+      (app.purpose || "").toLowerCase().includes(term)
+    );
+  });
+
+  const sortedApplications = [...filteredApplications].sort((a, b) => {
+    const field = sortField;
+    if (field === "billAmount") {
+      const an = parseFloat(a.billAmount) || 0;
+      const bn = parseFloat(b.billAmount) || 0;
+      return sortDirection === "asc" ? an - bn : bn - an;
+    }
+
+    const av = (a[field] || "").toString().toLowerCase();
+    const bv = (b[field] || "").toString().toLowerCase();
+
+    if (av < bv) return sortDirection === "asc" ? -1 : 1;
+    if (av > bv) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // ------- export helpers -------
+  const exportToExcel = (apps) => {
+    const headers = [
+      "ApplnNo",
+      "Emp ID",
+      "Name",
+      "Bill Date",
+      "Bill Amount",
+      "Purpose",
+    ];
+
+    const rows = apps.map((app) => [
+      app.ApplnNo || "",
+      app.empId || "",
+      app.name || "",
+      app.billDate || "",
+      app.billAmount || "",
+      app.purpose || "",
+    ]);
+
+    const escapeCsv = (value) => {
+      const v = value == null ? "" : String(value);
+      if (v.includes('"') || v.includes(",") || v.includes("\n")) {
+        return `"${v.replace(/"/g, '""')}"`;
+      }
+      return v;
+    };
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map(escapeCsv).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "da_applications.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = (apps) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      showToast("Popup blocked. Allow popups to export as PDF.", "error");
+      return;
+    }
+
+    const headerHtml = `
+      <tr>
+        <th>ApplnNo</th>
+        <th>Emp ID</th>
+        <th>Name</th>
+        <th>Bill Date</th>
+        <th>Bill Amount</th>
+        <th>Purpose</th>
+      </tr>
+    `;
+
+    const rowsHtml = apps
+      .map(
+        (app) => `
+      <tr>
+        <td>${app.ApplnNo || ""}</td>
+        <td>${app.empId || ""}</td>
+        <td>${app.name || ""}</td>
+        <td>${app.billDate || ""}</td>
+        <td>${app.billAmount || ""}</td>
+        <td>${app.purpose || ""}</td>
+      </tr>
+    `
+      )
+      .join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>DA Applications</title>
+          <style>
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #333; padding: 4px; font-size: 12px; }
+            th { background: #eee; }
+          </style>
+        </head>
+        <body>
+          <h3>DA Applications</h3>
+          <table>
+            <thead>${headerHtml}</thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const handleExport = (format) => {
+    if (!sortedApplications.length) {
+      showToast("No data to export.", "info");
+      return;
+    }
+    if (format === "excel") {
+      exportToExcel(sortedApplications);
+      showToast("Exported to Excel.", "success");
+    } else {
+      exportToPDF(sortedApplications);
+      showToast("Export opened for PDF printing.", "success");
+    }
   };
 
   return (
     <>
+      {message && (
+        <div className={`toast toast-${messageType}`}>{message}</div>
+      )}
+
       <div className="da-container">
         <h2>DA Application</h2>
 
-        {successMessage && <div className="success-message">{successMessage}</div>}
-
         <form onSubmit={handleSubmit}>
+          {/* Employee ID */}
           <div className="form-row">
             <label>Employee ID:</label>
             <input
@@ -204,55 +488,392 @@ function DAApplication() {
               value={employeeId}
               readOnly
               placeholder="Employee ID"
-              className={getInputClass("employeeId")}
+              className={getInputClass("empId")}
+            />
+            {submitAttempted && errors.empId && (
+              <div className="field-error-text">{errors.empId}</div>
+            )}
+          </div>
+
+          <div className="form-row">
+            <label>Application Type:</label>
+            <input type="text" value={applicationType.toUpperCase()} readOnly />
+          </div>
+
+          <div className="form-row">
+            <label>Name:</label>
+            <input type="text" value={employeeData.name || ""} readOnly />
+          </div>
+
+          <div className="form-row">
+            <label>Department:</label>
+            <input
+              type="text"
+              value={employeeData.department || ""}
+              readOnly
             />
           </div>
 
-          <div className="form-row"><label>Application Type:</label><input type="text" value={applicationType.toUpperCase()} readOnly /></div>
-          <div className="form-row"><label>Name:</label><input type="text" value={employeeData.name || ""} readOnly /></div>
-          <div className="form-row"><label>Department:</label><input type="text" value={employeeData.department || ""} readOnly /></div>
-          <div className="form-row"><label>Designation:</label><input type="text" value={employeeData.designation || ""} readOnly /></div>
+          <div className="form-row">
+            <label>Designation:</label>
+            <input
+              type="text"
+              value={employeeData.designation || ""}
+              readOnly
+            />
+          </div>
 
-          <div className="form-row"><label>Reason:</label><input type="text" value={reason} onChange={(e) => setReason(e.target.value)} className={getInputClass("reason")} /></div>
+          {/* Reason */}
+          <div className="form-row">
+            <label>Reason:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={reason}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setReason(value);
+                  setErrors((prev) => {
+                    if (!prev.reason) return prev;
+                    const u = { ...prev };
+                    delete u.reason;
+                    return u;
+                  });
+                }}
+                className={getInputClass("reason")}
+              />
+              {submitAttempted && errors.reason && (
+                <div className="field-error-text">{errors.reason}</div>
+              )}
+            </div>
+          </div>
 
-          <div className="form-row"><label>Start Date:</label><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={getInputClass("startDate")} /></div>
-          <div className="form-row"><label>End Date:</label><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={getInputClass("endDate")} /></div>
+          {/* Start Date */}
+          <div className="form-row">
+            <label>Start Date:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setStartDate(value);
+                  setErrors((prev) => {
+                    if (!prev.startDate) return prev;
+                    const u = { ...prev };
+                    delete u.startDate;
+                    return u;
+                  });
+                }}
+                className={getInputClass("startDate")}
+              />
+              {submitAttempted && errors.startDate && (
+                <div className="field-error-text">{errors.startDate}</div>
+              )}
+            </div>
+          </div>
 
+          {/* End Date */}
+          <div className="form-row">
+            <label>End Date:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEndDate(value);
+                  setErrors((prev) => {
+                    if (!prev.endDate) return prev;
+                    const u = { ...prev };
+                    delete u.endDate;
+                    return u;
+                  });
+                }}
+                className={getInputClass("endDate")}
+                min={startDate || ""}
+              />
+              {submitAttempted && errors.endDate && (
+                <div className="field-error-text">{errors.endDate}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Contact */}
           <div className="form-row">
             <label>Contact:</label>
-            <div className="phone-input">
+            <div className="phone-input" style={{ flex: 2 }}>
               <span>+91</span>
               <input
                 type="text"
                 value={contact}
-                onChange={(e) =>
-                  setContact(e.target.value.replace(/\D/g, "").slice(0, 10))
-                }
+                onChange={(e) => {
+                  const cleaned = e.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 10);
+                  setContact(cleaned);
+                  setErrors((prev) => {
+                    if (!prev.contact) return prev;
+                    const u = { ...prev };
+                    delete u.contact;
+                    return u;
+                  });
+                }}
                 className={getInputClass("contact")}
               />
             </div>
+            {submitAttempted && errors.contact && (
+              <div className="field-error-text">{errors.contact}</div>
+            )}
           </div>
-          {/* DA specific */}
-          <div className="form-row"><label>Bill Date:</label><input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className={getInputClass("billDate")} /></div>
-          <div className="form-row"><label>Bill Amount:</label><input type="text" value={billAmount} onChange={(e) => setBillAmount(e.target.value.replace(/[^\d.]/g, ""))} className={getInputClass("billAmount")} /></div>
-          <div className="form-row"><label>Purpose:</label><input type="text" value={purpose} onChange={(e) => setPurpose(e.target.value)} className={getInputClass("purpose")} /></div>
 
-          <div className="form-row attach-row"><label>Attachments:</label><div className="attach-section"><AttachFile files={file} onChange={(newFiles) => setFile(newFiles)} required={true} maxFiles={5} label="Attach File" /></div></div>
+          {/* DA specific fields */}
+          <div className="form-row">
+            <label>Bill Date:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="date"
+                value={billDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setBillDate(value);
+                  setErrors((prev) => {
+                    if (!prev.billDate) return prev;
+                    const u = { ...prev };
+                    delete u.billDate;
+                    return u;
+                  });
+                }}
+                className={getInputClass("billDate")}
+              />
+              {submitAttempted && errors.billDate && (
+                <div className="field-error-text">{errors.billDate}</div>
+              )}
+            </div>
+          </div>
 
-          <div className="button-row"><button type="submit" className="submit-btn">{editingIndex !== null ? "Update" : "Submit"}</button>
-            <button type="button" className="reset-btn" onClick={() => { setEmployeeId(""); setEmployeeData({}); setReason(""); setContact(""); setStartDate(""); setEndDate(""); setFile([]); setBillDate(""); setBillAmount(""); setPurpose(""); setEditingIndex(null); setErrors({}); setSubmitAttempted(false); setSuccessMessage(""); }}>Reset</button>
+          <div className="form-row">
+            <label>Bill Amount:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={billAmount}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d.]/g, "");
+                  setBillAmount(value);
+                  setErrors((prev) => {
+                    if (!prev.billAmount) return prev;
+                    const u = { ...prev };
+                    delete u.billAmount;
+                    return u;
+                  });
+                }}
+                className={getInputClass("billAmount")}
+              />
+              {submitAttempted && errors.billAmount && (
+                <div className="field-error-text">{errors.billAmount}</div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-row">
+            <label>Purpose:</label>
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={purpose}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setPurpose(value);
+                  setErrors((prev) => {
+                    if (!prev.purpose) return prev;
+                    const u = { ...prev };
+                    delete u.purpose;
+                    return u;
+                  });
+                }}
+                className={getInputClass("purpose")}
+              />
+              {submitAttempted && errors.purpose && (
+                <div className="field-error-text">{errors.purpose}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Attach File */}
+          <div className="form-row attach-row">
+            <label>Attachments:</label>
+            <div
+              className={
+                "attach-section" +
+                (submitAttempted && errors.files ? " input-error" : "")
+              }
+            >
+              <AttachFile
+                files={file}
+                onChange={(newFiles) => {
+                  setFile(newFiles);
+                  setErrors((prev) => {
+                    if (!prev.files) return prev;
+                    const u = { ...prev };
+                    delete u.files;
+                    return u;
+                  });
+                }}
+                required={true}
+                maxFiles={5}
+                label="Attach File"
+              />
+              {submitAttempted && errors.files && (
+                <div className="field-error-text">{errors.files}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="button-row">
+            <button type="submit" className="submit-btn">
+              {editingIndex !== null ? "Update" : "Submit"}
+            </button>
+            <button
+              type="button"
+              className="reset-btn"
+              onClick={() => {
+                setReason("");
+                setContact("");
+                setStartDate("");
+                setEndDate("");
+                setBillDate("");
+                setBillAmount("");
+                setPurpose("");
+                setFile([]);
+                setEditingIndex(null);
+                setErrors({});
+                setSubmitAttempted(false);
+                showToast("Form reset.", "info");
+              }}
+            >
+              Reset
+            </button>
           </div>
         </form>
       </div>
 
+      {/* Table */}
       {applications.length > 0 && (
         <div className="submitted-section-wrapper">
           <div className="submitted-section">
             <h3>Submitted DA Applications</h3>
+
+            <div className="table-controls">
+              <div className="table-control-item">
+                <label>Search:&nbsp;</label>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by ApplnNo, Emp ID, Name, Purpose"
+                />
+              </div>
+              <div className="table-control-item">
+                <label>Sort by:&nbsp;</label>
+                <select
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value)}
+                >
+                  <option value="ApplnNo">ApplnNo</option>
+                  <option value="empId">Emp ID</option>
+                  <option value="name">Name</option>
+                  <option value="billDate">Bill Date</option>
+                  <option value="billAmount">Bill Amount</option>
+                  <option value="purpose">Purpose</option>
+                </select>
+                <button
+                  type="button"
+                  className="sort-direction-btn"
+                  onClick={() =>
+                    setSortDirection((prev) =>
+                      prev === "asc" ? "desc" : "asc"
+                    )
+                  }
+                >
+                  {sortDirection === "asc" ? "⬆️ Asc" : "⬇️ Desc"}
+                </button>
+              </div>
+            </div>
+
             <table className="applications-table">
-              <thead><tr><th>ApplnNo</th><th>Emp ID</th><th>Name</th><th>Bill Date</th><th>Bill Amount</th><th>Purpose</th><th>Files</th><th>Action</th></tr></thead>
-              <tbody>{applications.map((app, idx) => (<tr key={app.ApplnNo}><td>{app.ApplnNo}</td><td>{app.empId}</td><td>{app.name}</td><td>{app.billDate}</td><td>{app.billAmount}</td><td>{app.purpose}</td><td>{app.files?.map((f,i)=><div key={i}>{f.name}</div>)}</td><td><button className="edit-btn" onClick={()=>handleEdit(idx)}>Edit</button></td></tr>))}</tbody>
+              <thead>
+                <tr>
+                  <th>ApplnNo</th>
+                  <th>Emp ID</th>
+                  <th>Name</th>
+                  <th>Bill Date</th>
+                  <th>Bill Amount</th>
+                  <th>Purpose</th>
+                  <th>Files</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedApplications.map((app, idx) => (
+                  <tr key={app.ApplnNo}>
+                    <td>{app.ApplnNo}</td>
+                    <td>{app.empId}</td>
+                    <td>{app.name}</td>
+                    <td>{app.billDate}</td>
+                    <td>{app.billAmount}</td>
+                    <td>{app.purpose}</td>
+                    <td>
+                      {app.files && app.files.length > 0 ? (
+                        app.files.map((f, i) => {
+                          const url = `${API_BASE}/uploads/${app.applicationType}/${app.empId}/${f.name}`;
+                          return (
+                            <div key={i}>
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {f.name}
+                              </a>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>
+                      <button
+                        className="edit-btn"
+                        onClick={() => handleEdit(idx)}
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
+
+            <div className="export-row">
+              <span>Export:&nbsp;</span>
+              <button
+                type="button"
+                className="export-btn"
+                onClick={() => handleExport("excel")}
+              >
+                Export to Excel
+              </button>
+              <button
+                type="button"
+                className="export-btn"
+                onClick={() => handleExport("pdf")}
+              >
+                Export to PDF
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -133,18 +133,18 @@ const AdminRequestsPortal = () => {
           </div>
         </Link>
 
-        <Link to="/admin/requests/other" className="req-card">
+        <Link to="/admin/requests/ltc" className="req-card">
           <div className="req-card-header">
             <span className="req-card-icon req-card-icon-purple">📂</span>
             <div>
-              <h2>Other Requests</h2>
-              <p>Any additional request types handled by admin.</p>
+              <h2>LTC Requests</h2>
+              <p>LTC request types handled by admin.</p>
             </div>
           </div>
           <div className="req-card-footer">
             <span className="req-card-status-dot"></span>
             <span className="req-card-footer-text">
-              Open the requests dashboard
+              Open LTC requests dashboard
             </span>
           </div>
         </Link>

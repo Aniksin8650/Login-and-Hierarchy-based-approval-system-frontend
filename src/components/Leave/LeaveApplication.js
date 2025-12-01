@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./LeaveApplication.css";
 import "../Shared/AttachFile.css";
 import { useLocation } from "react-router-dom";
@@ -19,15 +19,70 @@ function LeaveApplication() {
 
   const [errors, setErrors] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
   const [applications, setApplications] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("ApplnNo");
+  const [sortDirection, setSortDirection] = useState("asc");
 
-  // ---------------------------------------------
-  // Load logged-in user from localStorage (userInfo from Login)
-  // ---------------------------------------------
-  const loadUserFromLocal = () => {
+  // 🔔 Toast state
+  const [message, setMessage] = useState(null);
+  const [messageType, setMessageType] = useState("info");
+
+  const API_BASE =
+    process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
+
+  // 🔔 Toast helper
+  function showToast(msg, type = "info") {
+    setMessage(msg);
+    setMessageType(type);
+    setTimeout(() => setMessage(null), 4000);
+  }
+
+  const loadLeaveApplications = useCallback(
+    async (empId) => {
+      if (!empId) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/leave/empId/${empId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = Array.isArray(data)
+            ? data.map((d) => ({
+                ApplnNo: d.applnNo || d.ApplnNo,
+                empId: d.empId,
+                name: d.name,
+                department: d.department,
+                designation: d.designation,
+                reason: d.reason,
+                startDate: d.startDate,
+                endDate: d.endDate,
+                contact: d.contact,
+                applicationType: d.applicationType,
+                files: d.fileName
+                  ? d.fileName
+                      .split(";")
+                      .filter(Boolean)
+                      .map((name) => ({ name }))
+                  : [],
+              }))
+            : [];
+          setApplications(mapped);
+        } else {
+          setApplications([]);
+          showToast("Failed to load leave applications.", "error");
+        }
+      } catch (err) {
+        console.error("Error loading leave applications:", err);
+        setApplications([]);
+        showToast("Server error while loading leave applications.", "error");
+      }
+    },
+    [API_BASE]
+  );
+
+  // Load logged-in user from localStorage
+  const loadUserFromLocal = useCallback(() => {
     try {
       const stored = localStorage.getItem("userInfo");
       if (!stored) return;
@@ -49,18 +104,18 @@ function LeaveApplication() {
         designation,
       });
       setContact(cleanedPhone);
+
+      loadLeaveApplications(empId);
     } catch (err) {
       console.error("Failed to load userInfo from localStorage:", err);
+      showToast("Error reading user info. Please relogin.", "error");
     }
-  };
+  }, [loadLeaveApplications]);
 
   useEffect(() => {
     loadUserFromLocal();
-  }, []);
+  }, [loadUserFromLocal]);
 
-  // ---------------------------------------------
-  // Helper: build file objects from server data
-  // ---------------------------------------------
   const buildFilesFromServer = (fileNameString, appType, empId) => {
     if (!fileNameString) return [];
 
@@ -68,68 +123,55 @@ function LeaveApplication() {
       .split(";")
       .filter(Boolean)
       .map((name) => ({
-        name, // stored filename with timestamp
-        url: `http://localhost:8080/uploads/${appType}/${empId}/${name}`,
+        name,
+        url: `${API_BASE}/uploads/${appType}/${empId}/${name}`,
         isServerFile: true,
       }));
-  };
-
-  // ---------------------------------------------
-  // Helper: make stored filename look nicer in UI
-  // ---------------------------------------------
-  const getDisplayFileName = (storedName) => {
-    if (!storedName) return storedName;
-
-    const parts = storedName.split("_");
-    if (parts.length <= 1) return storedName;
-
-    const withoutTimestamp = parts.slice(1).join("_");
-
-    const lastDotIndex = withoutTimestamp.lastIndexOf(".");
-    if (lastDotIndex === -1) {
-      return withoutTimestamp.replace(/_/g, " ");
-    }
-
-    const base = withoutTimestamp.substring(0, lastDotIndex).replace(/_/g, " ");
-    const ext = withoutTimestamp.substring(lastDotIndex);
-    return base + ext;
   };
 
   const getInputClass = (field) =>
     submitAttempted && errors[field] ? "input-error" : "";
 
-  // ---------------------------------------------
   // Submit handler
-  // ---------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitAttempted(true);
 
     const newErrors = {};
-
-    if (!employeeId.trim()) newErrors.employeeId = true;
-    if (!employeeData || !employeeData.empId) newErrors.employeeId = true;
-    if (!reason.trim()) newErrors.reason = true;
-    if (!startDate) newErrors.startDate = true;
-    if (!endDate) newErrors.endDate = true;
-    if (startDate && endDate && new Date(endDate) < new Date(startDate))
-      newErrors.endDate = true;
-    if (!contact || contact.length !== 10) newErrors.contact = true;
-    if (!file || file.length === 0) newErrors.file = true;
+    if (!employeeId.trim() || !employeeData || !employeeData.empId) {
+      newErrors.empId = "Employee ID is required";
+    }
+    if (!reason.trim()) {
+      newErrors.reason = "Reason is required";
+    }
+    if (!startDate) {
+      newErrors.startDate = "Start date is required";
+    }
+    if (!endDate) {
+      newErrors.endDate = "End date is required";
+    } else if (startDate && new Date(endDate) < new Date(startDate)) {
+      newErrors.endDate = "End date cannot be before start date";
+    }
+    if (!contact || contact.length !== 10) {
+      newErrors.contact = "Contact must be 10 digits";
+    }
+    if (!file || file.length === 0) {
+      newErrors.files = "At least one attachment is required";
+    }
 
     setErrors(newErrors);
+
     if (Object.keys(newErrors).length > 0) {
-      alert("Please fix errors before submitting.");
+      showToast("Please fix highlighted fields before submitting.", "error");
       return;
     }
 
-    // Prepare FormData
     const formData = new FormData();
-    formData.append("empId", employeeData.empId);
+    formData.append("empId", employeeData.empId || employeeId);
     formData.append("applicationType", applicationType);
-    formData.append("name", employeeData.name);
-    formData.append("department", employeeData.department);
-    formData.append("designation", employeeData.designation);
+    formData.append("name", employeeData.name || "");
+    formData.append("department", employeeData.department || "");
+    formData.append("designation", employeeData.designation || "");
     formData.append("reason", reason);
     formData.append("startDate", startDate);
     formData.append("endDate", endDate);
@@ -148,7 +190,6 @@ function LeaveApplication() {
 
     formData.append("retainedFiles", retainedFiles);
 
-    // ApplnNo
     const ApplnNo =
       editingIndex !== null
         ? applications[editingIndex].ApplnNo
@@ -159,84 +200,66 @@ function LeaveApplication() {
     try {
       const url =
         editingIndex !== null
-          ? `http://localhost:8080/api/leave/update/${ApplnNo}`
-          : "http://localhost:8080/api/leave/submit";
+          ? `${API_BASE}/api/leave/update/${ApplnNo}`
+          : `${API_BASE}/api/leave/submit`;
 
       const method = editingIndex !== null ? "PUT" : "POST";
 
       const res = await fetch(url, { method, body: formData });
 
-      if (res.status === 409) {
-        const msg = await res.text();
-        alert(msg);
+      console.log("Submit response status:", res.status);
+
+      if (res.status === 400) {
+        const data = await res.json().catch(() => ({}));
+        console.log("Backend validation errors:", data);
+        const fieldErrors = data.fieldErrors || {};
+        setErrors(fieldErrors);
+        setSubmitAttempted(true);
+        showToast(data.message || "Validation error from server.", "error");
         return;
       }
 
-      if (res.ok) {
-        const detailsRes = await fetch(
-          `http://localhost:8080/api/leave/ApplnNo/${ApplnNo}`
-        );
-
-        if (!detailsRes.ok) {
-          alert("Leave saved, but failed to load details from server.");
-          return;
-        }
-
-        const data = await detailsRes.json();
-
-        const filesFromServer = buildFilesFromServer(
-          data.fileName,
-          data.applicationType,
-          data.empId
-        );
-
-        const newApp = {
-          ApplnNo: data.applnNo || data.ApplnNo || ApplnNo,
-          empId: data.empId,
-          name: data.name,
-          department: data.department,
-          designation: data.designation,
-          reason: data.reason,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          contact: data.contact,
-          applicationType: data.applicationType,
-          files: filesFromServer,
-        };
-
-        if (editingIndex !== null) {
-          const updatedList = [...applications];
-          updatedList[editingIndex] = newApp;
-          setApplications(updatedList);
-          setEditingIndex(null);
-          setSuccessMessage("Leave application updated!");
-        } else {
-          setApplications((prev) => [...prev, newApp]);
-          setSuccessMessage("Leave application submitted!");
-        }
-
-        setTimeout(() => setSuccessMessage(""), 5000);
-
-        // Reset form but keep logged-in user details
-        setReason("");
-        setContact(employeeData.phone || contact); // keep phone or current
-        setStartDate("");
-        setEndDate("");
-        setFile([]);
-        setErrors({});
-        setSubmitAttempted(false);
-      } else {
-        alert("Failed to submit application.");
+      if (res.status === 409) {
+        const msg = await res.text();
+        showToast(msg || "Duplicate leave application.", "error");
+        return;
       }
+
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        console.error("Backend error body:", msg);
+        showToast(
+          msg || `Failed to submit application. Status: ${res.status}`,
+          "error"
+        );
+        return;
+      }
+
+      const empIdToReload = employeeData.empId || employeeId;
+      await loadLeaveApplications(empIdToReload);
+
+      if (editingIndex !== null) {
+        setEditingIndex(null);
+        showToast("Leave application updated successfully!", "success");
+      } else {
+        showToast("Leave application submitted successfully!", "success");
+      }
+
+      // Reset form but keep user from localStorage
+      setReason("");
+      setStartDate("");
+      setEndDate("");
+      setFile([]);
+      setErrors({});
+      setSubmitAttempted(false);
+      loadUserFromLocal();
     } catch (err) {
       console.error("Error submitting:", err);
-      alert("Server error.");
+      showToast("Server error while submitting leave.", "error");
     }
   };
 
-  // ---------------------------------------------
   // Edit handler
-  // ---------------------------------------------
   const handleEdit = async (index) => {
     const app = applications[index];
 
@@ -253,11 +276,11 @@ function LeaveApplication() {
     setEndDate(app.endDate);
     setContact(app.contact);
     setEditingIndex(index);
+    setErrors({});
+    setSubmitAttempted(false);
 
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/leave/ApplnNo/${app.ApplnNo}`
-      );
+      const res = await fetch(`${API_BASE}/api/leave/ApplnNo/${app.ApplnNo}`);
       if (res.ok) {
         const data = await res.json();
 
@@ -270,26 +293,182 @@ function LeaveApplication() {
         setFile(filesFromServer);
       } else {
         setFile([]);
+        showToast("Failed to load attachments for this application.", "error");
       }
     } catch (err) {
       console.error("Error fetching old files:", err);
       setFile([]);
+      showToast("Server error while loading attachments.", "error");
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // --------- Filter + sort ----------
+  const filteredApplications = applications.filter((app) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (app.ApplnNo || "").toLowerCase().includes(term) ||
+      (app.empId || "").toLowerCase().includes(term) ||
+      (app.name || "").toLowerCase().includes(term) ||
+      (app.reason || "").toLowerCase().includes(term)
+    );
+  });
+
+  const sortedApplications = [...filteredApplications].sort((a, b) => {
+    const field = sortField;
+
+    const av = (a[field] || "").toString().toLowerCase();
+    const bv = (b[field] || "").toString().toLowerCase();
+
+    if (av < bv) return sortDirection === "asc" ? -1 : 1;
+    if (av > bv) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // --------- Export helpers ----------
+  const exportToExcel = (apps) => {
+    const headers = [
+      "ApplnNo",
+      "Emp ID",
+      "Name",
+      "Start Date",
+      "End Date",
+      "Reason",
+      "Files",
+    ];
+
+    const rows = apps.map((app) => [
+      app.ApplnNo || "",
+      app.empId || "",
+      app.name || "",
+      app.startDate || "",
+      app.endDate || "",
+      app.reason || "",
+      app.files && app.files.length
+        ? app.files.map((f) => f.name).join("; ")
+        : "",
+    ]);
+
+    const escapeCsv = (value) => {
+      const v = value == null ? "" : String(value);
+      if (v.includes('"') || v.includes(",") || v.includes("\n")) {
+        return `"${v.replace(/"/g, '""')}"`;
+      }
+      return v;
+    };
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map(escapeCsv).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "leave_applications.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = (apps) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      showToast("Popup blocked. Allow popups to export as PDF.", "error");
+      return;
+    }
+
+    const headerHtml = `
+      <tr>
+        <th>ApplnNo</th>
+        <th>Emp ID</th>
+        <th>Name</th>
+        <th>Start Date</th>
+        <th>End Date</th>
+        <th>Reason</th>
+        <th>Files</th>
+      </tr>
+    `;
+
+    const rowsHtml = apps
+      .map(
+        (app) => `
+      <tr>
+        <td>${app.ApplnNo || ""}</td>
+        <td>${app.empId || ""}</td>
+        <td>${app.name || ""}</td>
+        <td>${app.startDate || ""}</td>
+        <td>${app.endDate || ""}</td>
+        <td>${app.reason || ""}</td>
+        <td>${
+          app.files && app.files.length
+            ? app.files.map((f) => f.name).join("; ")
+            : ""
+        }</td>
+      </tr>
+    `
+      )
+      .join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>Leave Applications</title>
+          <style>
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #333; padding: 4px; font-size: 12px; }
+            th { background: #eee; }
+          </style>
+        </head>
+        <body>
+          <h3>Leave Applications</h3>
+          <table>
+            <thead>${headerHtml}</thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const handleExport = (format) => {
+    if (!sortedApplications.length) {
+      showToast("No data to export.", "info");
+      return;
+    }
+    if (format === "excel") {
+      exportToExcel(sortedApplications);
+      showToast("Exported to Excel.", "success");
+    } else {
+      exportToPDF(sortedApplications);
+      showToast("Export opened for PDF printing.", "success");
+    }
+  };
+
   return (
     <>
+      {/* 🔔 Toast */}
+      {message && (
+        <div className={`toast toast-${messageType}`}>{message}</div>
+      )}
+
       <div className="leave-container">
         <h2>Leave Application</h2>
 
-        {successMessage && (
-          <div className="success-message">{successMessage}</div>
-        )}
-
         <form onSubmit={handleSubmit}>
-          {/* Employee ID (auto-filled, read-only) */}
+          {/* Employee ID */}
           <div className="form-row">
             <label>Employee ID:</label>
             <input
@@ -297,8 +476,11 @@ function LeaveApplication() {
               value={employeeId}
               readOnly
               placeholder="Employee ID"
-              className={getInputClass("employeeId")}
+              className={getInputClass("empId")}
             />
+            {submitAttempted && errors.empId && (
+              <div className="field-error-text">{errors.empId}</div>
+            )}
           </div>
 
           {/* Application Type */}
@@ -330,65 +512,138 @@ function LeaveApplication() {
           {/* Reason */}
           <div className="form-row">
             <label>Reason for Leave:</label>
-            <input
-              type="text"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className={getInputClass("reason")}
-            />
+            <div style={{ flex: 2 }}>
+              <input
+                type="text"
+                value={reason}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setReason(value);
+                  setErrors((prev) => {
+                    if (!prev.reason) return prev;
+                    const u = { ...prev };
+                    delete u.reason;
+                    return u;
+                  });
+                }}
+                className={getInputClass("reason")}
+              />
+              {submitAttempted && errors.reason && (
+                <div className="field-error-text">{errors.reason}</div>
+              )}
+            </div>
           </div>
 
-          {/* Dates */}
+          {/* Start Date */}
           <div className="form-row">
             <label>Start Date:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className={getInputClass("startDate")}
-            />
+            <div style={{ flex: 2 }}>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setStartDate(value);
+                  setErrors((prev) => {
+                    if (!prev.startDate) return prev;
+                    const u = { ...prev };
+                    delete u.startDate;
+                    return u;
+                  });
+                }}
+                className={getInputClass("startDate")}
+              />
+              {submitAttempted && errors.startDate && (
+                <div className="field-error-text">{errors.startDate}</div>
+              )}
+            </div>
           </div>
 
+          {/* End Date */}
           <div className="form-row">
             <label>End Date:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className={getInputClass("endDate")}
-            />
+            <div style={{ flex: 2 }}>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEndDate(value);
+                  setErrors((prev) => {
+                    if (!prev.endDate) return prev;
+                    const u = { ...prev };
+                    delete u.endDate;
+                    return u;
+                  });
+                }}
+                className={getInputClass("endDate")}
+                min={startDate || ""}
+              />
+              {submitAttempted && errors.endDate && (
+                <div className="field-error-text">{errors.endDate}</div>
+              )}
+            </div>
           </div>
 
           {/* Contact */}
           <div className="form-row">
             <label>Contact:</label>
-            <div className="phone-input">
+            <div className="phone-input" style={{ flex: 2 }}>
               <span>+91</span>
               <input
                 type="text"
                 value={contact}
-                onChange={(e) =>
-                  setContact(e.target.value.replace(/\D/g, "").slice(0, 10))
-                }
+                onChange={(e) => {
+                  const cleaned = e.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, 10);
+                  setContact(cleaned);
+                  setErrors((prev) => {
+                    if (!prev.contact) return prev;
+                    const u = { ...prev };
+                    delete u.contact;
+                    return u;
+                  });
+                }}
                 className={getInputClass("contact")}
               />
             </div>
+            {submitAttempted && errors.contact && (
+              <div className="field-error-text">{errors.contact}</div>
+            )}
           </div>
 
           {/* Attach File */}
           <div className="form-row attach-row">
             <label>Attachments:</label>
-            <div className="attach-section">
+            <div
+              className={
+                "attach-section" +
+                (submitAttempted && errors.files ? " input-error" : "")
+              }
+            >
               <AttachFile
                 files={file}
-                onChange={(newFiles) => setFile(newFiles)}
+                onChange={(newFiles) => {
+                  setFile(newFiles);
+                  setErrors((prev) => {
+                    if (!prev.files) return prev;
+                    const u = { ...prev };
+                    delete u.files;
+                    return u;
+                  });
+                }}
                 required={true}
                 maxFiles={5}
                 label="Attach File"
               />
+              {submitAttempted && errors.files && (
+                <div className="field-error-text">{errors.files}</div>
+              )}
             </div>
           </div>
 
+          {/* Buttons */}
           <div className="button-row">
             <button type="submit" className="submit-btn">
               {editingIndex !== null ? "Update" : "Submit"}
@@ -398,19 +653,15 @@ function LeaveApplication() {
               type="button"
               className="reset-btn"
               onClick={() => {
-                // Reset only form-specific fields, keep user identity
                 setReason("");
-                loadUserFromLocal();
-                setContact((prev) =>
-                  prev ? prev : contact.replace(/\D/g, "").slice(0, 10)
-                );
                 setStartDate("");
                 setEndDate("");
                 setFile([]);
                 setEditingIndex(null);
                 setErrors({});
                 setSubmitAttempted(false);
-                setSuccessMessage("");
+                loadUserFromLocal();
+                showToast("Form reset.", "info");
               }}
             >
               Reset
@@ -420,27 +671,64 @@ function LeaveApplication() {
       </div>
 
       {/* Print All Leave Applications */}
-      <div className="print-btn-container">
+      {/* <div className="print-btn-container">
         <button
           className="print-btn"
           onClick={() => window.open("/print-leaves", "_blank")}
         >
           🖨️ Print All Leave Applications
         </button>
-      </div>
+      </div> */}
 
       {/* Table */}
       {applications.length > 0 && (
         <div className="submitted-section-wrapper">
           <div className="submitted-section">
-            <h3>Submitted Applications</h3>
+            <h3>Submitted Leave Applications</h3>
+
+            {/* Filter + Sort controls */}
+            <div className="table-controls">
+              <div className="table-control-item">
+                <label>Search:&nbsp;</label>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by ApplnNo, Emp ID, Name, Reason"
+                />
+              </div>
+
+              <div className="table-control-item">
+                <label>Sort by:&nbsp;</label>
+                <select
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value)}
+                >
+                  <option value="ApplnNo">Application No</option>
+                  <option value="name">Name</option>
+                  <option value="startDate">Start Date</option>
+                  <option value="endDate">End Date</option>
+                </select>
+                <button
+                  type="button"
+                  className="sort-direction-btn"
+                  onClick={() =>
+                    setSortDirection((prev) =>
+                      prev === "asc" ? "desc" : "asc"
+                    )
+                  }
+                >
+                  {sortDirection === "asc" ? "⬆️ Asc" : "⬇️ Desc"}
+                </button>
+              </div>
+            </div>
+
             <table className="applications-table">
               <thead>
                 <tr>
                   <th>ApplnNo</th>
-                  <th>Employee ID</th>
+                  <th>Emp ID</th>
                   <th>Name</th>
-                  <th>Type</th>
                   <th>Start</th>
                   <th>End</th>
                   <th>Reason</th>
@@ -449,28 +737,30 @@ function LeaveApplication() {
                 </tr>
               </thead>
               <tbody>
-                {applications.map((app, index) => (
+                {sortedApplications.map((app, idx) => (
                   <tr key={app.ApplnNo}>
                     <td>{app.ApplnNo}</td>
                     <td>{app.empId}</td>
                     <td>{app.name}</td>
-                    <td>{app.applicationType}</td>
                     <td>{app.startDate}</td>
                     <td>{app.endDate}</td>
                     <td>{app.reason}</td>
                     <td>
                       {app.files && app.files.length > 0 ? (
-                        app.files.map((f, i) => (
-                          <div key={i}>
-                            <a
-                              href={f.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {getDisplayFileName(f.name)}
-                            </a>
-                          </div>
-                        ))
+                        app.files.map((f, i) => {
+                          const url = `${API_BASE}/uploads/${app.applicationType}/${app.empId}/${f.name}`;
+                          return (
+                            <div key={i}>
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {f.name}
+                              </a>
+                            </div>
+                          );
+                        })
                       ) : (
                         "—"
                       )}
@@ -478,7 +768,7 @@ function LeaveApplication() {
                     <td>
                       <button
                         className="edit-btn"
-                        onClick={() => handleEdit(index)}
+                        onClick={() => handleEdit(idx)}
                       >
                         Edit
                       </button>
@@ -487,6 +777,25 @@ function LeaveApplication() {
                 ))}
               </tbody>
             </table>
+
+            {/* Export */}
+            <div className="export-row">
+              <span>Export:&nbsp;</span>
+              <button
+                type="button"
+                className="export-btn"
+                onClick={() => handleExport("excel")}
+              >
+                Export to Excel
+              </button>
+              <button
+                type="button"
+                className="export-btn"
+                onClick={() => handleExport("pdf")}
+              >
+                Export to PDF
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -2,8 +2,16 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "./Login.css";
 
+// helper: build full EMP ID from digits
+const buildEmpId = (digits) => {
+  const clean = (digits || "").replace(/\D/g, "");
+  if (!clean) return "";
+  const padded = clean.padStart(3, "0").slice(-3); // 001, 012, 123
+  return "EMP" + padded;
+};
+
 function Login() {
-  const [empId, setEmpId] = useState("");
+  const [empId, setEmpId] = useState(""); // only numeric part like "1", "02", "123"
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("EMPLOYEE");
   const [loading, setLoading] = useState(false);
@@ -23,20 +31,34 @@ function Login() {
     e.preventDefault();
     setLoading(true);
 
+    const formattedEmpId = buildEmpId(empId);
+
+    if (!formattedEmpId) {
+      showToast("Please enter Employee ID", "error");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ empId, password, role }),
+        body: JSON.stringify({ empId: formattedEmpId, password, role }),
       });
 
       const text = await res.text();
 
       if (!res.ok) {
         if (res.status === 404) {
-          showToast("Employee ID not found. Please check or register.", "error");
+          showToast(
+            "Employee ID not found. Please check or register.",
+            "error"
+          );
         } else if (res.status === 400 && text.includes("not registered")) {
-          showToast("Employee is not registered. Please register first.", "error");
+          showToast(
+            "Employee is not registered. Please register first.",
+            "error"
+          );
         } else if (res.status === 401) {
           showToast("Invalid password.", "error");
         } else if (res.status === 403) {
@@ -50,9 +72,9 @@ function Login() {
 
       const user = JSON.parse(text);
 
-      // 🔹 Store login response for Dashboard + Settings
+      // store in localStorage
       localStorage.setItem("userInfo", JSON.stringify(user));
-      localStorage.setItem("user", JSON.stringify(user)); // optional
+      localStorage.setItem("user", JSON.stringify(user)); // optional duplicate
 
       showToast(`Welcome ${user.name}!`, "success");
 
@@ -68,14 +90,9 @@ function Login() {
     }
   };
 
-
   return (
     <div className="auth-page">
-      {message && (
-        <div className={`toast toast-${messageType}`}>
-          {message}
-        </div>
-      )}
+      {message && <div className={`toast toast-${messageType}`}>{message}</div>}
 
       <div className="auth-card">
         <div className="auth-left">
@@ -94,13 +111,22 @@ function Login() {
 
             <form className="login-form" onSubmit={handleLogin}>
               <label>Employee ID</label>
-              <input
-                type="text"
-                value={empId}
-                onChange={(e) => setEmpId(e.target.value)}
-                placeholder="Enter Employee ID"
-                required
-              />
+              <div className="empid-row">
+                <div className="empid-input">
+                  <span className="empid-prefix">EMP-</span>
+                  <input
+                    type="text"
+                    value={empId}
+                    onChange={(e) =>
+                      setEmpId(
+                        e.target.value.replace(/\D/g, "").slice(0, 3) // only 3 digits
+                      )
+                    }
+                    placeholder="001"
+                    required
+                  />
+                </div>
+              </div>
 
               <label>Password</label>
               <input
@@ -126,8 +152,7 @@ function Login() {
               </button>
 
               <div className="register-link">
-                Not registered?{" "}
-                <Link to="/register">Click here to register</Link>
+                Not registered? <Link to="/register">Click here to register</Link>
               </div>
             </form>
           </div>

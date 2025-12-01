@@ -30,3 +30,99 @@
 .file-preview { display:flex; align-items:center; justify-content:space-between; width:260px; padding:8px 12px; border:1px solid #ddd; border-radius:6px; background:#fafafa; }
 .file-name { font-size:14px; font-weight:500; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .remove-btn { background:#ff4d4d; border:none; color:white; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; }
+
+/* --- Wrapper around submitted section (center the card) --- */
+.submitted-section-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+/* --- Table controls row (search + sort) --- */
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 10px 0 18px 0;
+  flex-wrap: wrap;
+}
+
+.table-control-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-control-item label {
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+.table-control-item input[type="text"],
+.table-control-item select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-width: 220px;
+  font-size: 14px;
+}
+
+/* --- Sort direction button (Asc/Desc) --- */
+.sort-direction-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #5b86e5;
+  background: #5b86e5;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.sort-direction-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* --- Export row under table --- */
+.export-row {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* --- Export buttons (Excel / PDF) --- */
+.export-btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #00b09b;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.export-btn:hover {
+  background: #00927f;
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+/* Slight tweak on small screens so things don't squish */
+@media (max-width: 768px) {
+  .table-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .export-row {
+    justify-content: flex-start;
+  }
+}
