@@ -18,7 +18,8 @@ const NavbarSwitcher = () => {
       path.startsWith("/DA-application") ||
       path.startsWith("/LTC-application") ||
       path.startsWith("/print-leaves") ||
-      path.startsWith("/settings"));
+      path.startsWith("/settings") ||
+      path.startsWith("/change-password"));
 
   if (isAdminMode) return <AdminNavbar />;
   if (isEmployeeMode) return <EmployeeNavbar />;

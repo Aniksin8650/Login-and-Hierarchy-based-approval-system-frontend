@@ -182,6 +182,11 @@ function Register() {
             <button type="submit" className="register-btn" disabled={loading}>
               {loading ? "Registering..." : "Register"}
             </button>
+
+            <div className="password-policy-note">
+              Passwords will expire every 3 months. You will be reminded in the last 7 days.
+            </div>
+            
           </form>
         </div>
       </div>

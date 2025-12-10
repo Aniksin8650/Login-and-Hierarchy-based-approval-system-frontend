@@ -273,3 +273,40 @@
     gap: 0.6rem;
   }
 }
+/* ---------- Password Expiry Badge on Settings ---------- */
+
+.navbar-badge {
+  display: inline-block;
+  margin-left: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background-color: #ef4444; /* red */
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9); /* dark outline so it pops on dark/light */
+}
+
+/* optional subtle pulse so user notices */
+@keyframes navbarBadgePulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.navbar-badge-danger {
+  animation: navbarBadgePulse 1.8s ease-in-out infinite;
+}
+
+/* Slight color emphasis on Settings when password is expiring soon */
+.navbar-link-warning {
+  color: #f97316; /* amber-500 */
+  font-weight: 600;
+}

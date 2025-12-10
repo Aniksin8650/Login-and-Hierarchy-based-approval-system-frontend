@@ -63,6 +63,12 @@ function Login() {
           showToast("Invalid password.", "error");
         } else if (res.status === 403) {
           showToast("Role mismatch. Please select correct role.", "error");
+        } else if (res.status === 423) {
+          // Account locked due to password expiry
+          showToast(
+            "Your password has expired and your account is locked. Please change your password.",
+            "error"
+          );
         } else {
           showToast(text || "Login failed", "error");
         }
@@ -76,7 +82,18 @@ function Login() {
       localStorage.setItem("userInfo", JSON.stringify(user));
       localStorage.setItem("user", JSON.stringify(user)); // optional duplicate
 
-      showToast(`Welcome ${user.name}!`, "success");
+      // Build welcome + password warning message
+      let welcomeMsg = `Welcome ${user.name}!`;
+      if (user.passwordExpiringSoon) {
+        const days = user.daysToPasswordExpiry ?? "few";
+        welcomeMsg += ` Your password will expire in ${days} day${
+          days === 1 ? "" : "s"
+        }. Please change it.`;
+      }
+
+      showToast(welcomeMsg, "success");
+
+      setLoading(false);
 
       if (user.role === "ADMIN") {
         navigate("/admin-dashboard");
@@ -154,6 +171,16 @@ function Login() {
               <div className="register-link">
                 Not registered? <Link to="/register">Click here to register</Link>
               </div>
+
+              {/* New: Change Password link */}
+              <div className="change-password-link">
+                <Link to="/change-password">Change Password</Link>
+              </div>
+
+              <div className="password-policy-note">
+                Passwords will expire every 3 months. You will be reminded in the last 7 days.
+              </div>
+              
             </form>
           </div>
         </div>

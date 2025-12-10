@@ -17,6 +17,19 @@ const Settings = () => {
 
   const [profileMessage, setProfileMessage] = useState("");
 
+  // Password policy info from userInfo
+  const [passwordExpiringSoon, setPasswordExpiringSoon] = useState(false);
+  const [daysToPasswordExpiry, setDaysToPasswordExpiry] = useState(null);
+  const [lastPasswordChangeDate, setLastPasswordChangeDate] = useState("");
+
+  // Security tab: change password form
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [securityMessage, setSecurityMessage] = useState("");
+  const [securityMessageType, setSecurityMessageType] = useState("info");
+  const [securityLoading, setSecurityLoading] = useState(false);
+
   // Load from localStorage once on mount
   useEffect(() => {
     try {
@@ -35,6 +48,12 @@ const Settings = () => {
       setRole(u.role || "");
       setPhone(u.phone || "");
       setEmail(u.email || "");
+
+      setPasswordExpiringSoon(!!u.passwordExpiringSoon);
+      setDaysToPasswordExpiry(
+        u.daysToPasswordExpiry !== undefined ? u.daysToPasswordExpiry : null
+      );
+      setLastPasswordChangeDate(u.lastPasswordChangeDate || "");
     } catch (err) {
       console.error(err);
       setProfileMessage("Failed to load user details.");
@@ -64,6 +83,107 @@ const Settings = () => {
       console.error(err);
       setProfileMessage("Failed to update profile.");
     }
+  };
+
+  // Change password from Security tab (inline, no navigation)
+  const handleChangePassword = async () => {
+    setSecurityMessage("");
+    setSecurityMessageType("info");
+
+    if (!empId) {
+      setSecurityMessageType("error");
+      setSecurityMessage("Employee ID not found. Please login again.");
+      return;
+    }
+
+    if (!currentPassword) {
+      setSecurityMessageType("error");
+      setSecurityMessage("Please enter your current password.");
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setSecurityMessageType("error");
+      setSecurityMessage("New password must be at least 6 characters long.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setSecurityMessageType("error");
+      setSecurityMessage("New password and confirm password do not match.");
+      return;
+    }
+
+    setSecurityLoading(true);
+
+    try {
+      const res = await fetch("http://localhost:8080/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          empId: empId,
+          oldPassword: currentPassword,
+          newPassword: newPassword,
+        }),
+      });
+
+      const text = await res.text();
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          setSecurityMessageType("error");
+          setSecurityMessage("Employee not found. Please login again.");
+        } else if (res.status === 401) {
+          setSecurityMessageType("error");
+          setSecurityMessage("Current password is incorrect.");
+        } else {
+          setSecurityMessageType("error");
+          setSecurityMessage(text || "Password change failed.");
+        }
+        setSecurityLoading(false);
+        return;
+      }
+
+      // success
+      setSecurityMessageType("success");
+      setSecurityMessage(text || "Password changed successfully.");
+
+      // clear fields
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+
+      // locally mark password as non-expiring (next login will refresh exact data)
+      setPasswordExpiringSoon(false);
+      setDaysToPasswordExpiry(null);
+
+      // Set local "last changed" date string for UI (dd/MM/yyyy)
+      const todayStr = new Date().toLocaleDateString("en-GB");
+      setLastPasswordChangeDate(todayStr);
+
+      // also update localStorage userInfo
+      try {
+        const stored = localStorage.getItem("userInfo");
+        if (stored) {
+          const u = JSON.parse(stored);
+          const updated = {
+            ...u,
+            passwordExpiringSoon: false,
+            daysToPasswordExpiry: null,
+            lastPasswordChangeDate: todayStr,
+          };
+          localStorage.setItem("userInfo", JSON.stringify(updated));
+        }
+      } catch (e) {
+        console.error("Failed to update userInfo after password change", e);
+      }
+    } catch (err) {
+      console.error("Change password error:", err);
+      setSecurityMessageType("error");
+      setSecurityMessage("Server error during password change.");
+    }
+
+    setSecurityLoading(false);
   };
 
   const renderContent = () => {
@@ -271,28 +391,101 @@ const Settings = () => {
               Keep your account protected by updating your password and security
               options.
             </p>
+
+            {lastPasswordChangeDate && (
+              <p className="settings-password-last-change">
+                Last password change: <strong>{lastPasswordChangeDate}</strong>
+              </p>
+            )}
+
+            <div
+              className={`settings-password-status ${
+                passwordExpiringSoon
+                  ? "settings-password-status-warning"
+                  : "settings-password-status-ok"
+              }`}
+            >
+              <div className="settings-password-status-left">
+                <span className="settings-password-dot" />
+                <div>
+                  <div className="settings-password-status-title">
+                    {passwordExpiringSoon
+                      ? `Password expires in ${
+                          daysToPasswordExpiry ?? "few"
+                        } day${
+                          daysToPasswordExpiry === 1 ? "" : "s"
+                        }`
+                      : "Password is active"}
+                  </div>
+                  <div className="settings-password-status-subtitle">
+                    {lastPasswordChangeDate
+                      ? `Last changed on ${lastPasswordChangeDate}. `
+                      : ""}
+                    Passwords expire every 3 months. You can change your
+                    password any time below.
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="settings-field">
               <label>Current Password</label>
-              <input type="password" placeholder="Enter current password" />
+              <input
+                type="password"
+                placeholder="Enter current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
             </div>
             <div className="settings-field-grid">
               <div className="settings-field">
                 <label>New Password</label>
-                <input type="password" placeholder="Enter new password" />
+                <input
+                  type="password"
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
               </div>
               <div className="settings-field">
                 <label>Confirm New Password</label>
-                <input type="password" placeholder="Re-type new password" />
+                <input
+                  type="password"
+                  placeholder="Re-type new password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                />
               </div>
             </div>
-            <div className="settings-toggle-list">
+
+            {securityMessage && (
+              <p
+                className={
+                  "settings-info-text " +
+                  (securityMessageType === "success"
+                    ? "settings-info-text-success"
+                    : "settings-info-text-error")
+                }
+              >
+                {securityMessage}
+              </p>
+            )}
+
+            <button
+              className="settings-btn-primary"
+              onClick={handleChangePassword}
+              disabled={securityLoading}
+            >
+              {securityLoading ? "Changing Password..." : "Change Password"}
+            </button>
+
+            <div className="settings-toggle-list" style={{ marginTop: "16px" }}>
               <label className="settings-toggle">
                 <input type="checkbox" />
                 <span className="settings-toggle-indicator" />
                 <span>Enable two-factor authentication (2FA)</span>
               </label>
             </div>
-            <button className="settings-btn-primary">Update Security</button>
           </div>
         );
 
@@ -300,6 +493,18 @@ const Settings = () => {
         return null;
     }
   };
+
+  // Banner text for the top of the page
+  const showPasswordBanner = !!empId; // show for any logged in user
+  const bannerTitle = passwordExpiringSoon
+    ? `Your password will expire in ${daysToPasswordExpiry ?? "few"} day${
+        daysToPasswordExpiry === 1 ? "" : "s"
+      }.`
+    : "Your password is currently active.";
+
+  const bannerSubtitle = lastPasswordChangeDate
+    ? `Last changed on ${lastPasswordChangeDate}. Passwords will expire every 3 months. You will be reminded in the last 7 days.`
+    : "Passwords will expire every 3 months. You will be reminded in the last 7 days.";
 
   return (
     <div className="settings-page">
@@ -315,6 +520,35 @@ const Settings = () => {
             options from a single place.
           </p>
         </header>
+
+        {/* Password status banner */}
+        {showPasswordBanner && (
+          <div
+            className={`settings-password-banner ${
+              passwordExpiringSoon
+                ? "settings-password-banner-warning"
+                : "settings-password-banner-ok"
+            }`}
+          >
+            <div className="settings-password-banner-left">
+              <span className="settings-password-dot" />
+              <div className="settings-password-banner-text">
+                <div className="settings-password-banner-title">
+                  {bannerTitle}
+                </div>
+                <div className="settings-password-banner-subtitle">
+                  {bannerSubtitle}
+                </div>
+              </div>
+            </div>
+            <button
+              className="settings-btn-secondary"
+              onClick={() => setActiveTab("Security")}
+            >
+              Go to Security
+            </button>
+          </div>
+        )}
 
         <div className="settings-layout">
           {/* Sidebar */}

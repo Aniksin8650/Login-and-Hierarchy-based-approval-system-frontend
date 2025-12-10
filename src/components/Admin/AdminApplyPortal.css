@@ -194,3 +194,20 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.apply-card-pending {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #9ca3af; /* soft gray */
+}
+
+/* Dim & lock the card when limit reached */
+.apply-card-locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.apply-card-locked .apply-card-footer span {
+  color: #f97373; /* soft red text for "Limit reached" */
+  font-weight: 600;
+}

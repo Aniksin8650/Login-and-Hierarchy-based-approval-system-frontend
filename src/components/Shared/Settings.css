@@ -351,3 +351,153 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- Password Banner on Settings page ---------- */
+
+.settings-password-banner {
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  backdrop-filter: blur(8px);
+}
+
+.settings-password-banner-ok {
+  background: linear-gradient(135deg, #0f172a, #111827);
+  color: #e5e7eb;
+}
+
+.settings-password-banner-warning {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #facc15;
+}
+
+.settings-password-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-password-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #22c55e; /* green by default */
+}
+
+.settings-password-banner-warning .settings-password-dot,
+.settings-password-status-warning .settings-password-dot {
+  background: #ef4444; /* red when warning */
+}
+
+.settings-password-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-password-banner-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.settings-password-banner-subtitle {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* Secondary button style reused in Security tab and banner */
+.settings-btn-secondary {
+  border-radius: 999px;
+  padding: 8px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  background: rgba(15, 23, 42, 0.03);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  color: #ffffff;
+}
+
+.settings-password-banner-warning .settings-btn-secondary {
+  border-color: #ea580c;
+  color: #7c2d12;
+  background: rgba(254, 243, 199, 0.9);
+}
+
+.settings-btn-secondary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+}
+
+/* ---------- Security tab password status row ---------- */
+
+.settings-password-status {
+  margin-bottom: 18px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.settings-password-status-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-password-status-ok {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.settings-password-status-warning {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #facc15;
+}
+
+.settings-password-status-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-password-status-subtitle {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* Responsive tweak */
+@media (max-width: 768px) {
+  .settings-password-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-password-banner-left {
+    align-items: flex-start;
+  }
+
+  .settings-password-banner .settings-btn-secondary {
+    align-self: stretch;
+    text-align: center;
+    width: 100%;
+  }
+}
+
+.settings-info-text-success {
+  color: #16a34a; /* green */
+}
+
+.settings-info-text-error {
+  color: #dc2626; /* red */
+}

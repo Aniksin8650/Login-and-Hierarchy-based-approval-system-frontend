@@ -299,3 +299,40 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Password info inside profile card */
+.empdash-passinfo {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.empdash-passinfo p {
+  margin: 0;
+}
+
+.empdash-passinfo strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+.empdash-card-pending {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #9ca3af; /* soft gray */
+}
+
+/* Locked card visual state */
+.empdash-card-locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.empdash-card-locked .empdash-card-footer span:first-child {
+  color: #f97373; /* soft red text for "Limit reached" */
+  font-weight: 600;
+}
+

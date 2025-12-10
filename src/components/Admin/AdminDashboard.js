@@ -1,10 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import "./AdminDashboard.css";
+import PasswordExpiryBanner from "../Shared/PasswordExpiryBanner";
 
 const AdminDashboard = () => {
   return (
     <div className="admin-dash">
+      {/* New: password expiry banner */}
+      <PasswordExpiryBanner />
       <div className="admin-dash-header">
         <div>
           <p className="admin-dash-badge">Admin • Dashboard</p>

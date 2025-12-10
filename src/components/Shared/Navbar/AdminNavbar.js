@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
 
@@ -19,6 +19,28 @@ const AdminNavbar = () => {
 
   const isApplyActive = pathname.startsWith("/admin/apply");
   const isRequestsActive = pathname.startsWith("/admin/requests");
+
+  // Read password expiry info from localStorage
+  const { passwordExpiringSoon, daysToPasswordExpiry } = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("userInfo");
+      if (!stored) return { passwordExpiringSoon: false, daysToPasswordExpiry: null };
+      const parsed = JSON.parse(stored);
+      return {
+        passwordExpiringSoon: !!parsed.passwordExpiringSoon,
+        daysToPasswordExpiry: parsed.daysToPasswordExpiry,
+      };
+    } catch (e) {
+      console.error("Error reading userInfo from localStorage", e);
+      return { passwordExpiringSoon: false, daysToPasswordExpiry: null };
+    }
+  }, []);
+
+  const settingsTitle = passwordExpiringSoon
+    ? `Password will expire in ${daysToPasswordExpiry ?? "few"} day${
+        daysToPasswordExpiry === 1 ? "" : "s"
+      }. Please change it.`
+    : "Settings";
 
   return (
     <nav className="navbar navbar-admin">
@@ -72,10 +94,16 @@ const AdminNavbar = () => {
       <div className="navbar-right">
         <ul className="navbar-links navbar-links-right">
           <li
-            className="navbar-link navbar-link-subtle"
+            className={`navbar-link navbar-link-subtle ${
+              passwordExpiringSoon ? "navbar-link-warning" : ""
+            }`}
             onClick={() => navigate("/settings")}
+            title={settingsTitle}
           >
-            Settings
+            <span>Settings</span>
+            {passwordExpiringSoon && (
+              <span className="navbar-badge navbar-badge-danger" />
+            )}
           </li>
           <li>
             <button

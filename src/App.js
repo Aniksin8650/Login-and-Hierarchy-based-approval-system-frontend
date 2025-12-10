@@ -8,6 +8,7 @@ import Footer from "./components/Shared/Footer";
 // 🌐 Public / Shared Pages
 import Home from "./components/Shared/Home";
 import Login from "./components/Shared/Login";
+import ChangePassword from "./components/Shared/ChangePassword";
 import Register from "./components/Shared/Register";
 import About from "./components/Shared/About";
 import Settings from "./components/Shared/Settings";
@@ -48,6 +49,7 @@ function App() {
             {/* Auth routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/change-password" element={<ChangePassword />} />
 
             {/* =================== EMPLOYEE AREA =================== */}
             {/* Employee Dashboard (already logged-in normal user) */}
