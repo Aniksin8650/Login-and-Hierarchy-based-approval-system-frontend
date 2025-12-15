@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./AdminApplyPortal.css";
 
 const AdminApplyPortal = () => {
+  const navigate = useNavigate();
   const [empId, setEmpId] = useState("");
 
   const [pendingLeave, setPendingLeave] = useState(null);
@@ -10,7 +11,7 @@ const AdminApplyPortal = () => {
   const [pendingDa, setPendingDa] = useState(null);
   const [pendingLtc, setPendingLtc] = useState(null);
 
-  // --- Load admin's empId from localStorage ---
+  // Load admin empId
   useEffect(() => {
     try {
       const stored = localStorage.getItem("userInfo");
@@ -23,7 +24,7 @@ const AdminApplyPortal = () => {
     }
   }, []);
 
-  // --- Fetch pending counts (initial + every 30s) ---
+  // Fetch pending counts
   useEffect(() => {
     if (!empId) return;
 
@@ -33,15 +34,13 @@ const AdminApplyPortal = () => {
       try {
         const res = await fetch(url);
         if (!res.ok) {
-          console.error("Failed to fetch count:", url, res.status);
           setter(null);
           return;
         }
         const text = await res.text();
         const num = parseInt(text, 10);
         setter(isNaN(num) ? null : num);
-      } catch (err) {
-        console.error("Error fetching count:", url, err);
+      } catch {
         setter(null);
       }
     };
@@ -54,21 +53,20 @@ const AdminApplyPortal = () => {
     };
 
     fetchAll();
-    const id = setInterval(fetchAll, 30000); // auto-refresh every 30s
+    const id = setInterval(fetchAll, 30000);
     return () => clearInterval(id);
   }, [empId]);
 
-  // --- Lock logic ---
-  const leaveLocked = pendingLeave !== null && pendingLeave >= 3;
-  const taLocked = pendingTa !== null && pendingTa >= 3;
-  const daLocked = pendingDa !== null && pendingDa >= 3;
-  const ltcLocked = pendingLtc !== null && pendingLtc >= 3;
+  // Lock logic
+  const leaveLocked = pendingLeave >= 3;
+  const taLocked = pendingTa >= 3;
+  const daLocked = pendingDa >= 3;
+  const ltcLocked = pendingLtc >= 3;
 
-  const handleLockedClick = (e) => {
-    e.preventDefault();
-    window.alert(
-      "Application limit reached (3 pending). Please wait for them to be processed."
-    );
+  const go = (path, locked, count) => {
+    navigate(path, {
+      state: { locked, pendingCount: count }
+    });
   };
 
   return (
@@ -89,93 +87,110 @@ const AdminApplyPortal = () => {
       </div>
 
       <div className="admin-apply-grid">
+
         {/* LEAVE */}
-        <Link
-          to={leaveLocked ? "#" : "/admin/apply/leave"}
+        <div
           className={`apply-card ${leaveLocked ? "apply-card-locked" : ""}`}
-          onClick={leaveLocked ? handleLockedClick : undefined}
+          onClick={() =>
+            go("/admin/apply/leave", leaveLocked, pendingLeave)
+          }
         >
           <div className="apply-card-header">
             <span className="apply-card-icon">📝</span>
             <h2>Leave Application</h2>
           </div>
           <p>
-            Apply for casual leave, earned leave, or any official leave
-            category with proper dates and reasons.
+            Apply for casual leave, earned leave, or any official leave category.
           </p>
-          <p className="apply-card-pending">
-            Pending applications: {pendingLeave === null ? "-" : pendingLeave}
+          <p className={`apply-card-pending ${leaveLocked ? "pending-max" : ""}`}>
+            Pending applications: {pendingLeave ?? "-"}
           </p>
           <div className="apply-card-footer">
-            <span>{leaveLocked ? "Limit reached" : "Start Leave Form"}</span>
+            <span>
+              {leaveLocked
+                ? "New submissions disabled"
+                : "Start Leave Form"}
+            </span>
           </div>
-        </Link>
+        </div>
 
         {/* TA */}
-        <Link
-          to={taLocked ? "#" : "/admin/apply/ta"}
+        <div
           className={`apply-card ${taLocked ? "apply-card-locked" : ""}`}
-          onClick={taLocked ? handleLockedClick : undefined}
+          onClick={() =>
+            go("/admin/apply/ta", taLocked, pendingTa)
+          }
         >
           <div className="apply-card-header">
             <span className="apply-card-icon">🚆</span>
             <h2>TA Application</h2>
           </div>
           <p>
-            Submit travel allowance requests for official journeys, including
-            distance, mode, and claim details.
+            Submit travel allowance requests for official journeys.
           </p>
-          <p className="apply-card-pending">
-            Pending applications: {pendingTa === null ? "-" : pendingTa}
+          <p className={`apply-card-pending ${taLocked ? "pending-max" : ""}`}>
+            Pending applications: {pendingTa ?? "-"}
           </p>
           <div className="apply-card-footer">
-            <span>{taLocked ? "Limit reached" : "Submit TA Claim"}</span>
+            <span>
+              {taLocked
+                ? "New submissions disabled"
+                : "Submit TA Claim"}
+            </span>
           </div>
-        </Link>
+        </div>
 
         {/* DA */}
-        <Link
-          to={daLocked ? "#" : "/admin/apply/da"}
+        <div
           className={`apply-card ${daLocked ? "apply-card-locked" : ""}`}
-          onClick={daLocked ? handleLockedClick : undefined}
+          onClick={() =>
+            go("/admin/apply/da", daLocked, pendingDa)
+          }
         >
           <div className="apply-card-header">
             <span className="apply-card-icon">🍽️</span>
             <h2>DA Application</h2>
           </div>
           <p>
-            Request daily allowance for duty tours, meetings, and official work
-            outside headquarters.
+            Request daily allowance for duty tours and official work.
           </p>
-          <p className="apply-card-pending">
-            Pending applications: {pendingDa === null ? "-" : pendingDa}
+          <p className={`apply-card-pending ${daLocked ? "pending-max" : ""}`}>
+            Pending applications: {pendingDa ?? "-"}
           </p>
           <div className="apply-card-footer">
-            <span>{daLocked ? "Limit reached" : "Submit DA Claim"}</span>
+            <span>
+              {daLocked
+                ? "New submissions disabled"
+                : "Submit DA Claim"}
+            </span>
           </div>
-        </Link>
+        </div>
 
         {/* LTC */}
-        <Link
-          to={ltcLocked ? "#" : "/admin/apply/ltc"}
+        <div
           className={`apply-card ${ltcLocked ? "apply-card-locked" : ""}`}
-          onClick={ltcLocked ? handleLockedClick : undefined}
+          onClick={() =>
+            go("/admin/apply/ltc", ltcLocked, pendingLtc)
+          }
         >
           <div className="apply-card-header">
             <span className="apply-card-icon">✈️</span>
             <h2>LTC Application</h2>
           </div>
           <p>
-            Apply for Leave Travel Concession as per rules, including journey
-            details and eligible family members.
+            Apply for Leave Travel Concession as per rules.
           </p>
-          <p className="apply-card-pending">
-            Pending applications: {pendingLtc === null ? "-" : pendingLtc}
+          <p className={`apply-card-pending ${ltcLocked ? "pending-max" : ""}`}>
+            Pending applications: {pendingLtc ?? "-"}
           </p>
           <div className="apply-card-footer">
-            <span>{ltcLocked ? "Limit reached" : "Apply for LTC"}</span>
+            <span>
+              {ltcLocked
+                ? "New submissions disabled"
+                : "Apply for LTC"}
+            </span>
           </div>
-        </Link>
+        </div>
       </div>
 
       <div className="admin-apply-note">

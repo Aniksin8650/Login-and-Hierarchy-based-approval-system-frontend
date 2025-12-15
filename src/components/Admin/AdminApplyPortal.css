@@ -203,11 +203,15 @@
 
 /* Dim & lock the card when limit reached */
 .apply-card-locked {
-  opacity: 0.6;
-  cursor: not-allowed;
+  opacity: 0.8;
+  cursor: pointer; /* still clickable */
+}
+.pending-max {
+  color: #ff6b6b;
+  font-weight: 600;
 }
 
 .apply-card-locked .apply-card-footer span {
-  color: #f97373; /* soft red text for "Limit reached" */
+  color: #ff6b6b;
   font-weight: 600;
 }

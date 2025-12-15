@@ -1,25 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "./Login.css";
 
-// helper: build full EMP ID from digits
+// Build EMP ID like EMP001
 const buildEmpId = (digits) => {
   const clean = (digits || "").replace(/\D/g, "");
   if (!clean) return "";
-  const padded = clean.padStart(3, "0").slice(-3); // 001, 012, 123
-  return "EMP" + padded;
+  return "EMP" + clean.padStart(3, "0").slice(-3);
 };
 
 function Login() {
-  const [empId, setEmpId] = useState(""); // only numeric part like "1", "02", "123"
+  const [empId, setEmpId] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("EMPLOYEE");
   const [loading, setLoading] = useState(false);
 
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState("info");
 
+  // Theme
+  const [theme, setTheme] = useState(
+    localStorage.getItem("theme") || "light"
+  );
+
+  // Role popup
+  const [roles, setRoles] = useState([]);
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [showRolePopup, setShowRolePopup] = useState(false);
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.body.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   const showToast = (msg, type = "info") => {
     setMessage(msg);
@@ -32,7 +45,6 @@ function Login() {
     setLoading(true);
 
     const formattedEmpId = buildEmpId(empId);
-
     if (!formattedEmpId) {
       showToast("Please enter Employee ID", "error");
       setLoading(false);
@@ -43,73 +55,82 @@ function Login() {
       const res = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ empId: formattedEmpId, password, role }),
+        body: JSON.stringify({
+          empId: formattedEmpId,
+          password,
+        }),
       });
 
       const text = await res.text();
 
       if (!res.ok) {
-        if (res.status === 404) {
-          showToast(
-            "Employee ID not found. Please check or register.",
-            "error"
-          );
-        } else if (res.status === 400 && text.includes("not registered")) {
-          showToast(
-            "Employee is not registered. Please register first.",
-            "error"
-          );
-        } else if (res.status === 401) {
-          showToast("Invalid password.", "error");
-        } else if (res.status === 403) {
-          showToast("Role mismatch. Please select correct role.", "error");
-        } else if (res.status === 423) {
-          // Account locked due to password expiry
-          showToast(
-            "Your password has expired and your account is locked. Please change your password.",
-            "error"
-          );
-        } else {
-          showToast(text || "Login failed", "error");
-        }
+        showToast(text || "Login failed", "error");
         setLoading(false);
         return;
       }
 
       const user = JSON.parse(text);
-
-      // store in localStorage
       localStorage.setItem("userInfo", JSON.stringify(user));
-      localStorage.setItem("user", JSON.stringify(user)); // optional duplicate
 
-      // Build welcome + password warning message
-      let welcomeMsg = `Welcome ${user.name}!`;
-      if (user.passwordExpiringSoon) {
-        const days = user.daysToPasswordExpiry ?? "few";
-        welcomeMsg += ` Your password will expire in ${days} day${
-          days === 1 ? "" : "s"
-        }. Please change it.`;
-      }
+      showToast(`Welcome ${user.name}!`, "success");
 
-      showToast(welcomeMsg, "success");
+      const fetchedRoles = user.roles || [];
 
-      setLoading(false);
+      // 🔹 ALWAYS show role popup
+      setRoles(fetchedRoles);
 
-      if (user.role === "ADMIN") {
-        navigate("/admin-dashboard");
+      // 🔹 If only one role, auto-select it
+      if (fetchedRoles.length === 1) {
+        setSelectedRole(fetchedRoles[0]);
       } else {
-        navigate("/dashboard");
+        setSelectedRole(null);
       }
-    } catch (err) {
-      console.error("Login error:", err);
+
+      setShowRolePopup(true);
+      setLoading(false);
+    } catch {
       showToast("Server error during login", "error");
       setLoading(false);
     }
   };
 
+  const closeRolePopup = () => {
+    setShowRolePopup(false);
+    setSelectedRole(null);
+  };
+
+  const confirmRoleLogin = () => {
+    if (!selectedRole) {
+      showToast("Please select a role", "error");
+      return;
+    }
+
+    const baseUser = JSON.parse(localStorage.getItem("userInfo"));
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...baseUser, activeRole: selectedRole })
+    );
+
+    setShowRolePopup(false);
+    navigate("/dashboard");
+  };
+
   return (
     <div className="auth-page">
-      {message && <div className={`toast toast-${messageType}`}>{message}</div>}
+      {/* Theme Toggle */}
+      <button
+        className="theme-toggle"
+        onClick={() =>
+          setTheme(theme === "light" ? "dark" : "light")
+        }
+        title="Toggle theme"
+      >
+        {theme === "light" ? "🌙" : "☀️"}
+      </button>
+
+      {message && (
+        <div className={`toast toast-${messageType}`}>{message}</div>
+      )}
 
       <div className="auth-card">
         <div className="auth-left">
@@ -128,21 +149,19 @@ function Login() {
 
             <form className="login-form" onSubmit={handleLogin}>
               <label>Employee ID</label>
-              <div className="empid-row">
-                <div className="empid-input">
-                  <span className="empid-prefix">EMP-</span>
-                  <input
-                    type="text"
-                    value={empId}
-                    onChange={(e) =>
-                      setEmpId(
-                        e.target.value.replace(/\D/g, "").slice(0, 3) // only 3 digits
-                      )
-                    }
-                    placeholder="001"
-                    required
-                  />
-                </div>
+
+              <div className="empid-input">
+                <span className="empid-prefix">EMP-</span>
+                <input
+                  type="text"
+                  value={empId}
+                  onChange={(e) =>
+                    setEmpId(e.target.value.replace(/\D/g, "").slice(0, 3))
+                  }
+                  placeholder="001"
+                  maxLength={3}
+                  required
+                />
               </div>
 
               <label>Password</label>
@@ -150,41 +169,73 @@ function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter Password"
                 required
               />
-
-              <label>Select Role</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="role-select"
-              >
-                <option value="EMPLOYEE">Employee</option>
-                <option value="ADMIN">Admin</option>
-              </select>
 
               <button type="submit" className="login-btn" disabled={loading}>
                 {loading ? "Logging in..." : "Login"}
               </button>
 
               <div className="register-link">
-                Not registered? <Link to="/register">Click here to register</Link>
+                Not registered? <Link to="/register">Register</Link>
               </div>
 
-              {/* New: Change Password link */}
               <div className="change-password-link">
                 <Link to="/change-password">Change Password</Link>
               </div>
-
-              <div className="password-policy-note">
-                Passwords will expire every 3 months. You will be reminded in the last 7 days.
-              </div>
-              
             </form>
           </div>
         </div>
       </div>
+
+      {/* ===== ROLE POPUP ===== */}
+      {showRolePopup && (
+        <div className="role-modal-overlay">
+          <div className="role-modal">
+            <button
+              className="role-modal-close"
+              onClick={closeRolePopup}
+              title="Change Employee ID"
+            >
+              ✕
+            </button>
+
+            <h3>Select Role</h3>
+
+            {roles.map((r, idx) => {
+              const singleRole = roles.length === 1;
+              const checked = singleRole || selectedRole === r;
+
+              return (
+                <label
+                  key={idx}
+                  className={`role-option ${
+                    singleRole ? "single-role" : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    checked={checked}
+                    disabled={singleRole}
+                    onChange={() => setSelectedRole(r)}
+                  />
+                  <div>
+                    <strong>{r.roleName}</strong>
+                    <div className="role-sub">
+                      {r.directorate} → {r.division}
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+
+            <button className="login-btn" onClick={confirmRoleLogin}>
+              Login
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

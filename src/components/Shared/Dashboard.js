@@ -86,43 +86,60 @@ const Dashboard = () => {
   const daLocked = pendingDa !== null && pendingDa >= 3;
   const ltcLocked = pendingLtc !== null && pendingLtc >= 3;
 
+  /**
+   * NOTE: We intentionally DO NOT prevent navigation when locked.
+   * We show a warning (so user knows new submissions are disabled) and then
+   * navigate to the module where editing existing pending applications remains possible.
+   *
+   * We pass { locked, pendingCount } in navigation state so the module can display a banner
+   * and disable the "new submit" controls there (frontend guard), while the backend enforces it.
+   */
   const handleModuleClick = (type) => {
     const limitMsg =
-      "Application limit reached (3 pending). Please wait for them to be processed.";
+      "Maximum pending applications reached (3). You can still view/edit existing applications, but creating a new one is disabled until pending items are processed.";
 
     switch (type) {
       case "leave":
         if (leaveLocked) {
           window.alert(limitMsg);
-          return;
         }
-        navigate("/leave-application");
+        navigate("/dashboard/leave", {
+          state: { locked: leaveLocked, pendingCount: pendingLeave },
+        });
         break;
+
       case "ta":
         if (taLocked) {
           window.alert(limitMsg);
-          return;
         }
-        navigate("/TA-application");
+        navigate("/dashboard/ta", {
+          state: { locked: taLocked, pendingCount: pendingTa },
+        });
         break;
+
       case "da":
         if (daLocked) {
           window.alert(limitMsg);
-          return;
         }
-        navigate("/DA-application");
+        navigate("/dashboard/da", {
+          state: { locked: daLocked, pendingCount: pendingDa },
+        });
         break;
+
       case "ltc":
         if (ltcLocked) {
           window.alert(limitMsg);
-          return;
         }
-        navigate("/LTC-application");
+        navigate("/dashboard/ltc", {
+          state: { locked: ltcLocked, pendingCount: pendingLtc },
+        });
         break;
+
       default:
         break;
     }
   };
+
 
   return (
     <div className="empdash">
@@ -191,95 +208,76 @@ const Dashboard = () => {
           <div className="empdash-grid">
             {/* Leave */}
             <button
-              className={`empdash-card ${
-                leaveLocked ? "empdash-card-locked" : ""
-              }`}
+              className={`empdash-card ${leaveLocked ? "empdash-card-locked" : ""}`}
               onClick={() => handleModuleClick("leave")}
             >
               <div className="empdash-card-header">
                 <span className="empdash-card-icon">📝</span>
                 <h3>Leave Application</h3>
               </div>
-              <p>
-                Apply for leaves and track approval status.
-              </p>
-              <p className="empdash-card-pending">
-                Pending applications:{" "}
-                {pendingLeave === null ? "-" : pendingLeave}
+              <p>Apply for leaves and track approval status.</p>
+              <p className={`empdash-card-pending ${leaveLocked ? "empdash-pending-max" : ""}`}>
+                Pending applications: {pendingLeave === null ? "-" : pendingLeave}
               </p>
               <div className="empdash-card-footer">
-                <span>
-                  {leaveLocked ? "Limit reached" : "Open Leave Module"}
-                </span>
+                <span>{leaveLocked ? "New submissions disabled" : "Open Leave Module"}</span>
                 <span className="empdash-card-arrow">➜</span>
               </div>
             </button>
 
             {/* TA */}
             <button
-              className={`empdash-card ${
-                taLocked ? "empdash-card-locked" : ""
-              }`}
+              className={`empdash-card ${taLocked ? "empdash-card-locked" : ""}`}
               onClick={() => handleModuleClick("ta")}
             >
               <div className="empdash-card-header">
                 <span className="empdash-card-icon">🚆</span>
                 <h3>TA Application</h3>
               </div>
-              <p>
-                Submit travel allowance claims for official journeys.
-              </p>
-              <p className="empdash-card-pending">
+              <p>Submit travel allowance claims for official journeys.</p>
+              <p className={`empdash-card-pending ${taLocked ? "empdash-pending-max" : ""}`}>
                 Pending applications: {pendingTa === null ? "-" : pendingTa}
               </p>
               <div className="empdash-card-footer">
-                <span>{taLocked ? "Limit reached" : "Open TA Module"}</span>
+                <span>{taLocked ? "New submissions disabled" : "Open TA Module"}</span>
                 <span className="empdash-card-arrow">➜</span>
               </div>
             </button>
 
             {/* DA */}
             <button
-              className={`empdash-card ${
-                daLocked ? "empdash-card-locked" : ""
-              }`}
+              className={`empdash-card ${daLocked ? "empdash-card-locked" : ""}`}
               onClick={() => handleModuleClick("da")}
             >
               <div className="empdash-card-header">
                 <span className="empdash-card-icon">🍽️</span>
                 <h3>DA Application</h3>
               </div>
-              <p>
-                Daily allowance for duty tours and official visits.
-              </p>
-              <p className="empdash-card-pending">
+              <p>Daily allowance for duty tours and official visits.</p>
+              <p className={`empdash-card-pending ${daLocked ? "empdash-pending-max" : ""}`}>
                 Pending applications: {pendingDa === null ? "-" : pendingDa}
               </p>
               <div className="empdash-card-footer">
-                <span>{daLocked ? "Limit reached" : "Open DA Module"}</span>
+                <span>{daLocked ? "New submissions disabled" : "Open DA Module"}</span>
                 <span className="empdash-card-arrow">➜</span>
               </div>
             </button>
 
             {/* LTC */}
             <button
-              className={`empdash-card ${
-                ltcLocked ? "empdash-card-locked" : ""
-              }`}
+              className={`empdash-card ${ltcLocked ? "empdash-card-locked" : ""}`}
               onClick={() => handleModuleClick("ltc")}
             >
               <div className="empdash-card-header">
                 <span className="empdash-card-icon">✈️</span>
                 <h3>LTC Application</h3>
               </div>
-              <p>
-                Apply for Leave Travel Concession as per rules.
-              </p>
-              <p className="empdash-card-pending">
+              <p>Apply for Leave Travel Concession as per rules.</p>
+              <p className={`empdash-card-pending ${ltcLocked ? "empdash-pending-max" : ""}`}>
                 Pending applications: {pendingLtc === null ? "-" : pendingLtc}
               </p>
               <div className="empdash-card-footer">
-                <span>{ltcLocked ? "Limit reached" : "Open LTC Module"}</span>
+                <span>{ltcLocked ? "New submissions disabled" : "Open LTC Module"}</span>
                 <span className="empdash-card-arrow">➜</span>
               </div>
             </button>

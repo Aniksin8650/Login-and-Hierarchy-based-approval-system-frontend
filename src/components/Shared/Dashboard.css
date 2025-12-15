@@ -19,6 +19,11 @@
   color: var(--empdash-text);
   overflow: hidden;
 }
+/* When dashboard is inside unified layout */
+.dashboard-main .empdash {
+  padding: 24px;
+}
+
 
 /* Background glows */
 .empdash-bg-circle {
@@ -95,7 +100,7 @@
   color: var(--empdash-muted);
 }
 
-/* Profile card on header right */
+/* Profile card */
 .empdash-profile-card {
   background: var(--empdash-surface);
   border-radius: var(--empdash-radius-md);
@@ -183,7 +188,6 @@
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.75);
   text-align: left;
   cursor: pointer;
-  color: inherit;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -220,6 +224,7 @@
 .empdash-card h3 {
   margin: 0;
   font-size: 1rem;
+  color:#e5e7eb
 }
 
 .empdash-card p {
@@ -228,6 +233,20 @@
   color: var(--empdash-muted);
 }
 
+/* Pending count */
+.empdash-card-pending {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+/* Pending count becomes red at max */
+.empdash-pending-max {
+  color: #ff6b6b !important;
+  font-weight: 600;
+}
+
+/* Footer */
 .empdash-card-footer {
   margin-top: auto;
   padding-top: 0.5rem;
@@ -236,10 +255,30 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.84rem;
+  color: white;
 }
 
 .empdash-card-arrow {
   font-size: 1rem;
+}
+
+/* Locked state (still clickable!) */
+.empdash-card-locked {
+  opacity: 0.85;
+  cursor: pointer;           /* IMPORTANT: allow navigation */
+  border-color: rgba(255, 99, 99, 0.35);
+}
+
+.empdash-card-locked:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--empdash-shadow);
+}
+
+.empdash-card-locked .empdash-card-footer span:first-child {
+  color: #ff6b6b;
+  font-weight: 600;
+  opacity: 0.95;
+  font-size: 0.9rem;
 }
 
 /* Info strip */
@@ -300,7 +339,7 @@
   }
 }
 
-/* Password info inside profile card */
+/* Password info */
 .empdash-passinfo {
   margin-top: 12px;
   padding-top: 8px;
@@ -318,21 +357,3 @@
   color: rgba(255, 255, 255, 0.95);
   font-weight: 600;
 }
-
-.empdash-card-pending {
-  margin-top: 8px;
-  font-size: 0.85rem;
-  color: #9ca3af; /* soft gray */
-}
-
-/* Locked card visual state */
-.empdash-card-locked {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.empdash-card-locked .empdash-card-footer span:first-child {
-  color: #f97373; /* soft red text for "Limit reached" */
-  font-weight: 600;
-}
-

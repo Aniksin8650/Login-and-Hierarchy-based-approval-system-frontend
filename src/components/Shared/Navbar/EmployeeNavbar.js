@@ -7,33 +7,45 @@ const EmployeeNavbar = () => {
   const { pathname } = useLocation();
 
   const goHome = () => {
-    navigate("/employee-dashboard");
+    navigate("/dashboard");
   };
 
   const logout = () => {
+    localStorage.clear();
     navigate("/login");
   };
 
-  const isDashboardActive =
-    pathname === "/employee-dashboard" || pathname === "/dashboard";
+  const isDashboardActive = pathname === "/dashboard";
+  const isApplyActive = pathname.startsWith("/dashboard/apply");
+  const isRequestsActive = pathname.startsWith("/dashboard/requests");
 
-  const isLeaveActive = pathname.startsWith("/leave-application");
-  const isTaActive = pathname.startsWith("/TA-application");
-  const isDaActive = pathname.startsWith("/DA-application");
-  const isLtcActive = pathname.startsWith("/LTC-application");
+  /* ===== ROLE / CAPABILITY CHECK ===== */
+  const canApprove = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (!stored) return false;
+      const u = JSON.parse(stored);
+      const roleName = u?.activeRole?.roleName?.toUpperCase() || "";
+      return ["DIVISION", "DIRECTOR", "ADMIN", "FINANCE"].some((r) =>
+        roleName.includes(r)
+      );
+    } catch {
+      return false;
+    }
+  }, []);
 
-  // Read password expiry info from localStorage (saved at login)
+  /* ===== PASSWORD EXPIRY INFO ===== */
   const { passwordExpiringSoon, daysToPasswordExpiry } = useMemo(() => {
     try {
       const stored = localStorage.getItem("userInfo");
-      if (!stored) return { passwordExpiringSoon: false, daysToPasswordExpiry: null };
+      if (!stored)
+        return { passwordExpiringSoon: false, daysToPasswordExpiry: null };
       const parsed = JSON.parse(stored);
       return {
         passwordExpiringSoon: !!parsed.passwordExpiringSoon,
         daysToPasswordExpiry: parsed.daysToPasswordExpiry,
       };
-    } catch (e) {
-      console.error("Error reading userInfo from localStorage", e);
+    } catch {
       return { passwordExpiringSoon: false, daysToPasswordExpiry: null };
     }
   }, []);
@@ -46,11 +58,11 @@ const EmployeeNavbar = () => {
 
   return (
     <nav className="navbar navbar-employee">
-      {/* Left Section */}
+      {/* Left */}
       <div className="navbar-left">
         <div className="navbar-logo" onClick={goHome}>
           <span className="navbar-logo-mark">●</span>
-          <span className="navbar-logo-text">Employee</span>
+          <span className="navbar-logo-text">Dashboard</span>
         </div>
 
         <ul className="navbar-links">
@@ -62,53 +74,42 @@ const EmployeeNavbar = () => {
           >
             Dashboard
           </li>
+
           <li
             className={`navbar-link ${
-              isLeaveActive ? "navbar-link-active" : ""
+              isApplyActive ? "navbar-link-active" : ""
             }`}
-            onClick={() => navigate("/leave-application")}
+            onClick={() => navigate("/dashboard/apply")}
           >
-            Leave
+            Apply
           </li>
-          <li
-            className={`navbar-link ${
-              isTaActive ? "navbar-link-active" : ""
-            }`}
-            onClick={() => navigate("/TA-application")}
-          >
-            TA
-          </li>
-          <li
-            className={`navbar-link ${
-              isDaActive ? "navbar-link-active" : ""
-            }`}
-            onClick={() => navigate("/DA-application")}
-          >
-            DA
-          </li>
-          <li
-            className={`navbar-link ${
-              isLtcActive ? "navbar-link-active" : ""
-            }`}
-            onClick={() => navigate("/LTC-application")}
-          >
-            LTC
-          </li>
+
+          {/* ✅ REQUESTS ADDED */}
+          {canApprove && (
+            <li
+              className={`navbar-link ${
+                isRequestsActive ? "navbar-link-active" : ""
+              }`}
+              onClick={() => navigate("/dashboard/requests")}
+            >
+              Requests
+            </li>
+          )}
         </ul>
       </div>
 
-      {/* Center Section */}
+      {/* Center */}
       <div className="navbar-center">
         <div className="navbar-search-wrapper">
           <input
             type="text"
-            placeholder="Search your applications..."
+            placeholder="Search applications..."
             className="search-bar"
           />
         </div>
       </div>
 
-      {/* Right Section */}
+      {/* Right */}
       <div className="navbar-right">
         <ul className="navbar-links navbar-links-right">
           <li
@@ -118,11 +119,12 @@ const EmployeeNavbar = () => {
             onClick={() => navigate("/settings")}
             title={settingsTitle}
           >
-            <span>Settings</span>
+            Settings
             {passwordExpiringSoon && (
               <span className="navbar-badge navbar-badge-danger" />
             )}
           </li>
+
           <li>
             <button
               className="navbar-btn navbar-btn-outline"

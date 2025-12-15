@@ -258,3 +258,19 @@
   color: #9aa0a6;
   font-size: 13px;
 }
+
+.status-text {
+  font-weight: 600;
+}
+
+.status-approved {
+  color: green;
+}
+
+.status-rejected {
+  color: red;
+}
+
+.status-pending {
+  color: #ff9800;
+}

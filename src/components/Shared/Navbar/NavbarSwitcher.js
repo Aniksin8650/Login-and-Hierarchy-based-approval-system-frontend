@@ -1,28 +1,29 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import PublicNavbar from "./PublicNavbar";
 import EmployeeNavbar from "./EmployeeNavbar";
-import AdminNavbar from "./AdminNavbar";
+import PublicNavbar from "./PublicNavbar";
+
+const PUBLIC_ROUTES = ["/login", "/register", "/change-password"];
 
 const NavbarSwitcher = () => {
   const location = useLocation();
-  const path = location.pathname || "/";
+  const user = JSON.parse(localStorage.getItem("user"));
 
-  const isAdminMode = path.startsWith("/admin");
-  const isEmployeeMode =
-    !isAdminMode &&
-    (path.startsWith("/employee") ||
-      path.startsWith("/dashboard") ||
-      path.startsWith("/leave-application") ||
-      path.startsWith("/TA-application") ||
-      path.startsWith("/DA-application") ||
-      path.startsWith("/LTC-application") ||
-      path.startsWith("/print-leaves") ||
-      path.startsWith("/settings") ||
-      path.startsWith("/change-password"));
+  const isPublicRoute = PUBLIC_ROUTES.some((path) =>
+    location.pathname.startsWith(path)
+  );
 
-  if (isAdminMode) return <AdminNavbar />;
-  if (isEmployeeMode) return <EmployeeNavbar />;
+  // 🔹 Public pages ALWAYS get public navbar
+  if (isPublicRoute) {
+    return <PublicNavbar />;
+  }
+
+  // 🔹 Logged-in users get employee navbar
+  if (user) {
+    return <EmployeeNavbar />;
+  }
+
+  // 🔹 Fallback (not logged in but not public route)
   return <PublicNavbar />;
 };
 

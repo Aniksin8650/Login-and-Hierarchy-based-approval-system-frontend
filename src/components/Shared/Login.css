@@ -1,4 +1,12 @@
-/* ---------- Page Background ---------- */
+/* ---------- GLOBAL RESET ---------- */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* ---------- PAGE ---------- */
 
 .auth-page {
   min-height: 100vh;
@@ -8,9 +16,26 @@
   padding: 24px;
   font-family: 'Segoe UI', sans-serif;
   background: linear-gradient(135deg, #74ebd5, #acb6e5);
+  position: relative;
 }
 
-/* ---------- Auth Card (Wrapper for Login) ---------- */
+/* ---------- THEME TOGGLE (ADDED) ---------- */
+
+.theme-toggle {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+/* ---------- CARD ---------- */
 
 .auth-card {
   width: 900px;
@@ -21,21 +46,9 @@
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   overflow: hidden;
-  animation: cardEnter 0.45s ease-out;
 }
 
-@keyframes cardEnter {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* ---------- Left Side (Logo & Info) ---------- */
+/* ---------- LEFT ---------- */
 
 .auth-left {
   background: radial-gradient(circle at top left, #4f46e5, #0ea5e9);
@@ -57,29 +70,12 @@
   font-weight: 700;
   font-size: 20px;
   margin-bottom: 16px;
-  background: rgba(255, 255, 255, 0.1);
 }
 
-.auth-logo-circle span {
-  letter-spacing: 1px;
-}
-
-.auth-title {
-  margin: 0 0 8px;
-  font-size: 24px;
-}
-
-.auth-subtitle {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  opacity: 0.9;
-}
-
-/* ---------- Right Side (Login Form) ---------- */
+/* ---------- RIGHT ---------- */
 
 .auth-right {
-  padding: 28px 28px;
+  padding: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -88,10 +84,11 @@
 
 .login-container h2 {
   margin-bottom: 18px;
-  color: #111827;
   font-size: 1.7rem;
   text-align: center;
 }
+
+/* ---------- FORM ---------- */
 
 .login-form {
   background: white;
@@ -106,76 +103,89 @@
 .login-form label {
   margin: 8px 0 4px;
   font-weight: 600;
-  color: #374151;
   font-size: 14px;
+  color: #374151;
 }
 
-.login-form input,
-.login-form select {
-  padding: 9px 11px;
+.login-form input {
+  height: 40px;
+  padding: 0 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   margin-bottom: 12px;
   font-size: 14px;
-  transition: 0.2s border-color, 0.2s box-shadow, 0.2s background-color;
   background-color: #f9fafb;
 }
 
-.login-form input:focus,
-.login-form select:focus {
+.login-form input:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
   outline: none;
-  background-color: #ffffff;
+  background: #fff;
 }
 
-/* ---------- Login Button ---------- */
+/* ---------- EMP ID FIELD (MATCHES IMAGE) ---------- */
+
+.empid-input {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 8px;
+  margin-bottom: 12px;
+}
+
+.empid-prefix {
+  background: #f3f4f6;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+  margin-right: 8px;
+}
+
+.empid-input input {
+  border: none;
+  outline: none;
+  height: 80%;
+  font-size: 14px;
+  flex: 1;
+  background: transparent;
+  padding-top:12px;
+}
+
+/* ---------- BUTTON ---------- */
 
 .login-btn {
+  height: 40px;
   background: linear-gradient(135deg, #11998e, #38ef7d);
   border: none;
-  padding: 10px;
   border-radius: 999px;
   color: white;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-  margin-top: 4px;
 }
 
-.login-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.35);
-  opacity: 0.97;
-}
+/* ---------- LINKS ---------- */
 
-.login-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* ---------- Register Link ---------- */
-
-.register-link {
-  margin-top: 12px;
-  font-size: 14px;
+.register-link,
+.change-password-link {
   text-align: center;
-  color: #4b5563;
+  font-size: 13px;
+  margin-top: 8px;
 }
 
-.register-link a {
+.register-link a,
+.change-password-link a {
   color: #2563eb;
   text-decoration: none;
   font-weight: 600;
 }
 
-.register-link a:hover {
-  text-decoration: underline;
-}
-
-/* ---------- Toast Notification ---------- */
+/* ---------- TOAST ---------- */
 
 .toast {
   position: fixed;
@@ -184,104 +194,126 @@
   padding: 10px 16px;
   border-radius: 8px;
   color: white;
-  font-size: 14px;
   z-index: 1000;
-  animation: fadeInUp 0.3s ease;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
-  max-width: 260px;
 }
 
-.toast-success {
-  background-color: #16a34a;
+/* ---------- Role Modal Overlay ---------- */
+
+.role-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.toast-error {
-  background-color: #dc2626;
+/* ---------- Role Modal Card ---------- */
+
+.role-modal {
+  width: 340px;
+  background: #ffffff;
+  padding: 24px 24px 20px; /* ✅ more bottom padding */
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
 }
 
-.toast-info {
-  background-color: #2563eb;
+/* ---------- Title ---------- */
+
+.role-modal h3 {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: 18px;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ---------- Role Options ---------- */
+
+.role-option {
+  display: flex;
+  gap: 12px;
+  padding: 12px;                /* ✅ better spacing */
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 12px;
+  cursor: pointer;
+  align-items: flex-start;
 }
 
-/* ---------- Responsive ---------- */
+.role-option input {
+  margin-top: 4px;
+}
+
+.role-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* ---------- LOGIN BUTTON (FIXED) ---------- */
+
+.role-modal .login-btn {
+  width: 100%;
+  margin-top: 18px;             /* ✅ space from role list */
+  padding: 10px 0;              /* ✅ not touching edges */
+  border-radius: 999px;
+}
+/* ---------- ROLE MODAL CLOSE BUTTON ---------- */
+
+.role-modal {
+  position: relative; /* required for close button */
+}
+
+.role-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.role-modal-close:hover {
+  background: #e5e7eb;
+}
+
+
+/* ---------- DARK MODE (ADDED, SAFE) ---------- */
+
+body[data-theme="dark"] {
+  background: #020617;
+}
+
+body[data-theme="dark"] .auth-card,
+body[data-theme="dark"] .login-form,
+body[data-theme="dark"] .auth-right {
+  background: #020617;
+}
+
+body[data-theme="dark"] input {
+  background: #020617;
+  color: #e5e7eb;
+  border-color: #334155;
+}
+
+body[data-theme="dark"] label,
+body[data-theme="dark"] h1,
+body[data-theme="dark"] h2,
+body[data-theme="dark"] p {
+  color: #e5e7eb;
+}
+
+/* ---------- RESPONSIVE ---------- */
 
 @media (max-width: 768px) {
   .auth-card {
     grid-template-columns: 1fr;
   }
-
-  .auth-left {
-    text-align: center;
-    align-items: center;
-  }
-
-  .auth-right {
-    padding: 20px;
-  }
-}
-.empid-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.empid-input {
-  display: flex;
-  align-items: center;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 4px 8px;
-  background: #fff;
-}
-
-.empid-prefix {
-  font-weight: 600;
-  margin-right: 4px;
-  color: #333;
-  white-space: nowrap;
-}
-
-.empid-input input {
-  border: none;
-  outline: none;
-  width: 70px;
-  font-size: 14px;
-}
-
-
-/* ---------- Change Password Link on Login ---------- */
-
-.change-password-link {
-  margin-top: 6px;
-  font-size: 13px;
-  text-align: center;
-  color: #4b5563;
-}
-
-.change-password-link a {
-  color: #0f766e;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.change-password-link a:hover {
-  text-decoration: underline;
-}
-
-.password-policy-note {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #6b7280;
-  text-align: center;
 }

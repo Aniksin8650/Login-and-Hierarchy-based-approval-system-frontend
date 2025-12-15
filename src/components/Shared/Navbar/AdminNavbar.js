@@ -6,45 +6,33 @@ const AdminNavbar = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const goHome = () => {
-    navigate("/admin-dashboard");
-  };
+  const goHome = () => navigate("/dashboard/admin");
+  const logout = () => navigate("/login");
 
-  const logout = () => {
-    navigate("/login");
-  };
+  const isHomeActive = pathname === "/dashboard/admin";
+  const isApplyActive = pathname.startsWith("/dashboard/admin/apply");
+  const isRequestsActive = pathname.startsWith("/dashboard/admin/requests");
 
-  const isHomeActive =
-    pathname === "/admin-dashboard" || pathname === "/admin";
-
-  const isApplyActive = pathname.startsWith("/admin/apply");
-  const isRequestsActive = pathname.startsWith("/admin/requests");
-
-  // Read password expiry info from localStorage
   const { passwordExpiringSoon, daysToPasswordExpiry } = useMemo(() => {
     try {
       const stored = localStorage.getItem("userInfo");
-      if (!stored) return { passwordExpiringSoon: false, daysToPasswordExpiry: null };
+      if (!stored) return {};
       const parsed = JSON.parse(stored);
       return {
         passwordExpiringSoon: !!parsed.passwordExpiringSoon,
         daysToPasswordExpiry: parsed.daysToPasswordExpiry,
       };
-    } catch (e) {
-      console.error("Error reading userInfo from localStorage", e);
-      return { passwordExpiringSoon: false, daysToPasswordExpiry: null };
+    } catch {
+      return {};
     }
   }, []);
 
   const settingsTitle = passwordExpiringSoon
-    ? `Password will expire in ${daysToPasswordExpiry ?? "few"} day${
-        daysToPasswordExpiry === 1 ? "" : "s"
-      }. Please change it.`
+    ? `Password expires in ${daysToPasswordExpiry ?? "few"} days`
     : "Settings";
 
   return (
     <nav className="navbar navbar-admin">
-      {/* Left Section */}
       <div className="navbar-left">
         <div className="navbar-logo" onClick={goHome}>
           <span className="navbar-logo-mark">●</span>
@@ -52,64 +40,33 @@ const AdminNavbar = () => {
         </div>
 
         <ul className="navbar-links">
-          <li
-            className={`navbar-link ${
-              isHomeActive ? "navbar-link-active" : ""
-            }`}
-            onClick={goHome}
-          >
+          <li className={`navbar-link ${isHomeActive ? "navbar-link-active" : ""}`} onClick={goHome}>
             Admin Home
           </li>
-          <li
-            className={`navbar-link ${
-              isApplyActive ? "navbar-link-active" : ""
-            }`}
-            onClick={() => navigate("/admin/apply")}
-          >
+          <li className={`navbar-link ${isApplyActive ? "navbar-link-active" : ""}`} onClick={() => navigate("/dashboard/admin/apply")}>
             Apply
           </li>
-          <li
-            className={`navbar-link ${
-              isRequestsActive ? "navbar-link-active" : ""
-            }`}
-            onClick={() => navigate("/admin/requests")}
-          >
+          <li className={`navbar-link ${isRequestsActive ? "navbar-link-active" : ""}`} onClick={() => navigate("/dashboard/admin/requests")}>
             Requests
           </li>
         </ul>
       </div>
 
-      {/* Center Section */}
       <div className="navbar-center">
-        <div className="navbar-search-wrapper">
-          <input
-            type="text"
-            placeholder="Search requests, employees..."
-            className="search-bar"
-          />
-        </div>
+        <input className="search-bar" placeholder="Search requests, employees..." />
       </div>
 
-      {/* Right Section */}
       <div className="navbar-right">
         <ul className="navbar-links navbar-links-right">
           <li
-            className={`navbar-link navbar-link-subtle ${
-              passwordExpiringSoon ? "navbar-link-warning" : ""
-            }`}
-            onClick={() => navigate("/settings")}
+            className={`navbar-link navbar-link-subtle ${passwordExpiringSoon ? "navbar-link-warning" : ""}`}
             title={settingsTitle}
+            onClick={() => navigate("/settings")}
           >
-            <span>Settings</span>
-            {passwordExpiringSoon && (
-              <span className="navbar-badge navbar-badge-danger" />
-            )}
+            Settings
           </li>
           <li>
-            <button
-              className="navbar-btn navbar-btn-outline"
-              onClick={logout}
-            >
+            <button className="navbar-btn navbar-btn-outline" onClick={logout}>
               Logout
             </button>
           </li>

@@ -7,8 +7,8 @@ import AttachFile from "../Shared/AttachFile";
 import { formatFileNameForDisplay } from "../Shared/fileNameUtils";
 
 function DAApplication() {
-  const location = useLocation();
-  const { applicationType } = location.state || { applicationType: "da" };
+const location = useLocation();
+const applicationType = location.state?.applicationType ?? "da";
 
   const [employeeId, setEmployeeId] = useState("");
   const [employeeData, setEmployeeData] = useState({});
@@ -76,6 +76,7 @@ function DAApplication() {
                 billDate: d.billDate,
                 billAmount: d.billAmount,
                 purpose: d.purpose,
+                status: (d.status || "PENDING").toUpperCase(),
                 files: d.fileName
                   ? d.fileName
                       .split(";")
@@ -287,6 +288,15 @@ function DAApplication() {
   // --------------------------------------------------------------------
   const handleEdit = async (index) => {
     const app = applications[index];
+
+          // 🚫 HARD BUSINESS GUARD
+  if (!app || app.status !== "PENDING") {
+    showToast(
+      `This application is already ${app?.status || "processed"} and cannot be edited.`,
+      "error"
+    );
+    return;
+  }
     setEmployeeId(app.empId);
     setEmployeeData({
       empId: app.empId,
@@ -896,7 +906,7 @@ function DAApplication() {
                     Purpose {renderSortIndicator("purpose")}
                   </th>
                   <th>Files</th>
-                  <th>Action</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -929,18 +939,24 @@ function DAApplication() {
                       )}
                     </td>
                     <td>
-                      <button
-                        className="edit-btn"
-                        onClick={() =>
-                          handleEdit(
-                            applications.findIndex(
-                              (x) => x.ApplnNo === app.ApplnNo
+                      {app.status === "PENDING" ? (
+                        <button
+                          className="edit-btn"
+                          onClick={() =>
+                            handleEdit(
+                              applications.findIndex(
+                                (x) => x.ApplnNo === app.ApplnNo
+                              )
                             )
-                          )
-                        }
-                      >
-                        Edit
-                      </button>
+                          }
+                        >
+                          Edit
+                        </button>
+                      ) : (
+                        <span className={`status-text status-${app.status.toLowerCase()}`}>
+                          {app.status}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

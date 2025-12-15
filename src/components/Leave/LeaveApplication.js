@@ -7,8 +7,8 @@ import AttachFile from "../Shared/AttachFile";
 import { formatFileNameForDisplay } from "../Shared/fileNameUtils";
 
 function LeaveApplication() {
-  const location = useLocation();
-  const { applicationType } = location.state || { applicationType: "leave" };
+const location = useLocation();
+const applicationType = location.state?.applicationType ?? "leave";
 
   const [employeeId, setEmployeeId] = useState("");
   const [employeeData, setEmployeeData] = useState({});
@@ -66,6 +66,7 @@ function LeaveApplication() {
                 endDate: d.endDate,
                 contact: d.contact,
                 applicationType: d.applicationType,
+                status: d.status || "PENDING", // ✅ ADD THIS
                 files: d.fileName
                   ? d.fileName
                       .split(";")
@@ -275,6 +276,11 @@ function LeaveApplication() {
   // Edit handler
   const handleEdit = async (index) => {
     const app = applications[index];
+    
+    if (app.status !== "PENDING") {
+    showToast("Only pending applications can be edited.", "info");
+    return;
+  }
 
     setEmployeeId(app.empId);
     setEmployeeData({
@@ -804,7 +810,7 @@ function LeaveApplication() {
                   </th>
                   <th>Reason</th>
                   <th>Files</th>
-                  <th>Action</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -842,18 +848,30 @@ function LeaveApplication() {
                         )}
                       </td>
                       <td>
-                        <button
-                          className="edit-btn"
-                          onClick={() =>
-                            handleEdit(
-                              applications.findIndex(
-                                (a) => a.ApplnNo === app.ApplnNo
+                        {app.status === "PENDING" ? (
+                          <button
+                            className="edit-btn"
+                            onClick={() =>
+                              handleEdit(
+                                applications.findIndex(
+                                  (a) => a.ApplnNo === app.ApplnNo
+                                )
                               )
-                            )
-                          }
-                        >
-                          Edit
-                        </button>
+                            }
+                          >
+                            Edit
+                          </button>
+                        ) : (
+                          <span
+                            className={
+                              app.status === "APPROVED"
+                                ? "status-approved"
+                                : "status-rejected"
+                            }
+                          >
+                            {app.status}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))

@@ -1,11 +1,11 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-// 🔹 Shared Layout
+/* 🔹 Shared Layout */
 import NavbarSwitcher from "./components/Shared/Navbar/NavbarSwitcher";
 import Footer from "./components/Shared/Footer";
 
-// 🌐 Public / Shared Pages
+/* 🌐 Public Pages */
 import Home from "./components/Shared/Home";
 import Login from "./components/Shared/Login";
 import ChangePassword from "./components/Shared/ChangePassword";
@@ -13,88 +13,95 @@ import Register from "./components/Shared/Register";
 import About from "./components/Shared/About";
 import Settings from "./components/Shared/Settings";
 
-// 🧭 Employee Pages
-import Dashboard from "./components/Shared/Dashboard"; // Employee dashboard
+/* 🧭 Core Pages */
+import Dashboard from "./components/Shared/Dashboard";
 import LeaveApplication from "./components/Leave/LeaveApplication";
 import TAApplication from "./components/TA/TAApplication";
 import DAApplication from "./components/DA/DAApplication";
 import LTCApplication from "./components/LTC/LTCApplication";
 import PrintLeaveApplications from "./components/Leave/PrintLeaveApplications";
 
-// 🔐 Admin Pages (Dash + Requests)
+/* 🔐 Legacy Admin (KEEP – backward compatibility) */
 import AdminDashboard from "./components/Admin/AdminDashboard";
+import AdminApplyPortal from "./components/Admin/AdminApplyPortal";
+import AdminRequestsPortal from "./components/Admin/AdminRequestsPortal";
+import RequireRole from "./components/Shared/RequireRole";
+
 import AdminLeaveRequests from "./components/Admin/Requests/AdminLeaveRequests";
 import AdminTARequests from "./components/Admin/Requests/AdminTARequests";
 import AdminDARequests from "./components/Admin/Requests/AdminDARequests";
 import AdminLTCRequests from "./components/Admin/Requests/AdminLTCRequests";
 
-// 🔐 Admin Pages (Apply / Requests Portals)
-import AdminApplyPortal from "./components/Admin/AdminApplyPortal";
-import AdminRequestsPortal from "./components/Admin/AdminRequestsPortal";
+/* 🧱 Unified Dashboard Layout */
+import DashboardLayout from "./components/Dashboard/DashboardLayout";
 
 function App() {
   return (
     <Router>
       <div className="App">
-        {/* 🔼 Dynamic header (Public / Employee / Admin) */}
+        {/* 🔼 Navbar */}
         <NavbarSwitcher />
 
-        {/* Main page content (pushed down because navbar is fixed) */}
-        <div style={{ minHeight: "80vh", marginTop: "80px" }}>
+        {/* Main Content */}
+        <div style={{ minHeight: "80vh", marginTop: "50px" }}>
           <Routes>
-            {/* =================== PUBLIC / PRE-LOGIN AREA =================== */}
-            {/* Homepage -> has Login button -> /login */}
-            <Route path="/" element={<Home />} />
 
-            {/* Auth routes */}
+            {/* ================= PUBLIC ================= */}
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/settings" element={<Settings />} />
 
-            {/* =================== EMPLOYEE AREA =================== */}
-            {/* Employee Dashboard (already logged-in normal user) */}
+            {/* ================= LEGACY ROUTES (DO NOT TOUCH) ================= */}
             <Route path="/employee-dashboard" element={<Dashboard />} />
-
-            {/* Optional: keep older behaviour if something still links to /dashboard */}
-            <Route path="/dashboard" element={<Dashboard />} />
-
-            {/* Employee’s 4 main modules */}
             <Route path="/leave-application" element={<LeaveApplication />} />
             <Route path="/TA-application" element={<TAApplication />} />
             <Route path="/DA-application" element={<DAApplication />} />
             <Route path="/LTC-application" element={<LTCApplication />} />
-
-            {/* Extra employee pages */}
-            <Route path="/about" element={<About />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/print-leaves" element={<PrintLeaveApplications />} />
 
-            {/* =================== ADMIN AREA =================== */}
-            {/* After admin login, redirect here */}
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            {/* Legacy admin */}
+            <Route
+              path="/admin"
+              element={
+                <RequireRole allowedRoles={["ADMIN"]}>
+                  <AdminDashboard />
+                </RequireRole>
+              }
+            />
 
-            {/* ---- Admin dashboard will have two big buttons: APPLY and REQUESTS ----
-                 These two routes are the landing pages for those buttons */}
+            {/* ================= NEW UNIFIED DASHBOARD ================= */}
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              {/* Landing */}
+              <Route index element={<Dashboard />} />
 
-            {/* 1️⃣ Admin APPLY portal (admin applying for own leaves/TA/DA/LTC) */}
-            <Route path="/admin/apply" element={<AdminApplyPortal />} />
-            {/* Inside Apply portal, show 4 cards that link to below paths: */}
-            <Route path="/admin/apply/leave" element={<LeaveApplication />} />
-            <Route path="/admin/apply/ta" element={<TAApplication />} />
-            <Route path="/admin/apply/da" element={<DAApplication />} />
-            <Route path="/admin/apply/ltc" element={<LTCApplication />} />
+              {/* APPLY */}
+              <Route path="apply">
+                {/* default apply page */}
+                <Route index element={<LeaveApplication />} />
 
-            {/* 2️⃣ Admin REQUESTS portal (approve / reject employees’ requests) */}
-            <Route path="/admin/requests" element={<AdminRequestsPortal />} />
-            {/* Inside Requests portal, show 4 cards that link to below paths: */}
-            <Route path="/admin/requests/leave" element={<AdminLeaveRequests />} />
-            <Route path="/admin/requests/ta" element={<AdminTARequests />} />
-            <Route path="/admin/requests/da" element={<AdminDARequests />} />
-            <Route path="/admin/requests/ltc" element={<AdminLTCRequests />} />
+                <Route path="leave" element={<LeaveApplication />} />
+                <Route path="ta" element={<TAApplication />} />
+                <Route path="da" element={<DAApplication />} />
+                <Route path="ltc" element={<LTCApplication />} />
+              </Route>
+
+              {/* REQUESTS */}
+              <Route path="requests">
+                <Route index element={<AdminRequestsPortal />} />
+
+                <Route path="leave" element={<AdminLeaveRequests />} />
+                <Route path="ta" element={<AdminTARequests />} />
+                <Route path="da" element={<AdminDARequests />} />
+                <Route path="ltc" element={<AdminLTCRequests />} />
+              </Route>
+            </Route>
           </Routes>
         </div>
 
-        {/* 🔽 Common footer for everyone */}
+        {/* 🔽 Footer */}
         <Footer />
       </div>
     </Router>

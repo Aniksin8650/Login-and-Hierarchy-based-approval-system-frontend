@@ -7,8 +7,8 @@ import AttachFile from "../Shared/AttachFile";
 import { formatFileNameForDisplay } from "../Shared/fileNameUtils";
 
 function LTCApplication() {
-  const location = useLocation();
-  const { applicationType } = location.state || { applicationType: "ltc" };
+const location = useLocation();
+const applicationType = location.state?.applicationType ?? "ltc";
 
   const [employeeId, setEmployeeId] = useState("");
   const [employeeData, setEmployeeData] = useState({});
@@ -72,6 +72,7 @@ function LTCApplication() {
                 destination: d.travelDestination || d.destination || "",
                 familyCount: d.familyMembers || d.familyCount || "",
                 claimYear: d.claimYear,
+                status: (d.status || "PENDING").toUpperCase(),
                 files: d.fileName
                   ? d.fileName
                       .split(";")
@@ -289,7 +290,14 @@ function LTCApplication() {
   // -------- Edit handler --------
   const handleEdit = async (index) => {
     const app = applications[index];
-
+      // 🚫 HARD BUSINESS GUARD
+  if (!app || app.status !== "PENDING") {
+    showToast(
+      `This application is already ${app?.status || "processed"} and cannot be edited.`,
+      "error"
+    );
+    return;
+  }
     setEmployeeId(app.empId);
     setEmployeeData({
       empId: app.empId,
@@ -907,7 +915,7 @@ function LTCApplication() {
                       Claim Year {renderSortIndicator("claimYear")}
                     </th>
                     <th>Files</th>
-                    <th>Action</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -940,18 +948,24 @@ function LTCApplication() {
                         )}
                       </td>
                       <td>
-                        <button
-                          className="edit-btn"
-                          onClick={() =>
-                            handleEdit(
-                              applications.findIndex(
-                                (x) => x.ApplnNo === app.ApplnNo
+                        {app.status === "PENDING" ? (
+                          <button
+                            className="edit-btn"
+                            onClick={() =>
+                              handleEdit(
+                                applications.findIndex(
+                                  (x) => x.ApplnNo === app.ApplnNo
+                                )
                               )
-                            )
-                          }
-                        >
-                          Edit
-                        </button>
+                            }
+                          >
+                            Edit
+                          </button>
+                        ) : (
+                          <span className={`status-text status-${app.status.toLowerCase()}`}>
+                            {app.status}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
