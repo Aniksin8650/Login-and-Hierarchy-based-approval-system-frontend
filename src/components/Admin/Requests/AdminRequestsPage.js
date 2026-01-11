@@ -1,169 +1,237 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import Footer from "../../Shared/Footer";
+import { toast } from "react-toastify";
+
+
 import "../AdminDashboard.css";
 import "./AdminLeaveRequests.css";
-import "../AdminRequestsPortal.css"; // reuse the same header styles
+import "../AdminRequestsPortal.css";
 
 const API_BASE = "http://localhost:8080";
 
+/* ================= TAB DEFINITIONS ================= */
+
+const TABS = {
+  PENDING: "Requests",
+  FORWARDED: "Forwarded",
+  APPROVED: "Accepted",
+  REJECTED: "Rejected",
+  REJECTED_BY_HIGHER: "Rejected by Higher",
+};
+
 const AdminRequestsPage = ({
   title,
-  baseUrl,
+  baseUrl,        // e.g. /api/leave/approvals
   entityLabel,
   renderDetails,
-  badgeText = "Admin • Requests",
+  badgeText = "Requests",
   subtitle,
-  backTo = "/admin/requests",
+  backTo = "/dashboard/requests",
 }) => {
+  /* ================= USER CONTEXT ================= */
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const empId = user?.empId;
+
+  /* ================= STATE ================= */
+
   const [requests, setRequests] = useState([]);
   const [activeTab, setActiveTab] = useState("PENDING");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [remarks, setRemarks] = useState({});
 
-  const fetchRequests = useCallback(
-    async (status) => {
-      try {
-        setLoading(true);
-        setError("");
+  const getErrorMessage = (err, fallback) => {
+    if (typeof err?.response?.data === "string") return err.response.data;
+    if (err?.response?.data?.message) return err.response.data.message;
+    return fallback;
+  };
 
-        const res = await axios.get(`${API_BASE}${baseUrl}/status/${status}`);
-        setRequests(res.data || []);
-      } catch (err) {
-        console.error(err);
-        setError(
-          err.response?.data ||
-            `Failed to load ${entityLabel}. Please try again.`
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [baseUrl, entityLabel]
+
+  /* ================= FETCH REQUESTS ================= */
+
+  const fetchRequests = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await axios.get(
+        `${API_BASE}${baseUrl}/pending-for-me`,
+        { params: { empId } }
+      );
+
+      setRequests(res.data || []);
+    } catch (err) {
+      toast.error(
+        getErrorMessage(err, `Failed to load ${entityLabel}. Please try again.`)
   );
+    } finally {
+      setLoading(false);
+    }
+  }, [baseUrl, empId, entityLabel]);
 
   useEffect(() => {
-    fetchRequests(activeTab);
-  }, [activeTab, fetchRequests]);
+    if (empId) fetchRequests();
+  }, [fetchRequests, empId]);
 
-  const handleAction = async (applnNo, newStatus) => {
-    try {
-      await axios.put(`${API_BASE}${baseUrl}/status/${applnNo}`, {
-        status: newStatus,
-      });
+  /* ================= ACTION HANDLERS ================= */
 
-      setRequests((prev) => prev.filter((req) => req.applnNo !== applnNo));
-    } catch (err) {
-      console.error(err);
-      alert(
-        err.response?.data ||
-          `Failed to update status to ${newStatus}. Please try again.`
-      );
-    }
-  };
+const handleApprove = async (applnNo) => {
+  try {
+    await axios.post(`${API_BASE}${baseUrl}/${applnNo}/approve`, null, {
+      params: { approverId: empId, remarks: remarks[applnNo] || "" },
+    });
 
-  const renderTabLabel = (tab) => {
-    if (tab === "PENDING") return "Requests";
-    if (tab === "APPROVED") return "Accepted";
-    if (tab === "REJECTED") return "Rejected";
-    return tab;
-  };
+    toast.success("Request approved successfully");
+    fetchRequests();
+  } catch (err) {
+    toast.error(getErrorMessage(err, "You are not the correct approval authority"));
+  }
+};
+
+const handleReject = async (applnNo) => {
+  try {
+    await axios.post(`${API_BASE}${baseUrl}/${applnNo}/reject`, null, {
+      params: { approverId: empId, remarks: remarks[applnNo] || "" },
+    });
+
+    toast.success("Request rejected successfully");
+    fetchRequests();
+  } catch (err) {
+    toast.error(getErrorMessage(err, "Failed to reject request"));
+  }
+};
+
+
+
+/* ================= TAB FILTERING (FINAL & CORRECT) ================= */
+
+const filteredRequests = requests.filter((r) => {
+  const { status, actedByMe, myAction, canAct } = r;
+
+  // 🟡 Waiting for my action
+  if (activeTab === "PENDING") {
+    return canAct === true;
+  }
+
+  // 🔵 I approved, now waiting for higher authority
+  if (activeTab === "FORWARDED") {
+    return actedByMe && myAction === "APPROVED" && status === "IN_APPROVAL";
+  }
+
+  // 🟢 Fully approved (my approval was final)
+  if (activeTab === "APPROVED") {
+    return actedByMe && myAction === "APPROVED" && status === "APPROVED";
+  }
+
+  // 🔴 I personally rejected
+  if (activeTab === "REJECTED") {
+    return actedByMe && myAction === "REJECTED";
+  }
+
+  // ⚫ I approved, but higher authority rejected later
+  if (activeTab === "REJECTED_BY_HIGHER") {
+    return actedByMe && myAction === "APPROVED" && status === "REJECTED";
+  }
+
+  return false;
+});
+
+
+  /* ================= RENDER ================= */
 
   return (
-    <div>
-      {/* 🔹 Hero-style admin header */}
-      <div className="admin-req">
-        <div className="admin-req-header">
-          <div>
-            <p className="admin-req-badge">{badgeText}</p>
-            <h1>{title}</h1>
-            {subtitle && (
-              <p className="admin-req-subtitle">{subtitle}</p>
-            )}
-          </div>
-
-          <Link to={backTo} className="admin-req-home-link">
-            ← Back to Requests Portal
-          </Link>
+    <div className="admin-req">
+      {/* ===== HEADER ===== */}
+      <div className="admin-req-header">
+        <div>
+          <p className="admin-req-badge">{badgeText}</p>
+          <h1>{title}</h1>
+          {subtitle && (
+            <p className="admin-req-subtitle">{subtitle}</p>
+          )}
         </div>
 
-        {/* Inner content container */}
-        <div className="admin-leave-container">
-          {/* Tabs */}
-          <div className="tab-buttons">
-            <button
-              className={activeTab === "PENDING" ? "active" : ""}
-              onClick={() => setActiveTab("PENDING")}
-            >
-              Requests
-            </button>
-            <button
-              className={activeTab === "APPROVED" ? "active" : ""}
-              onClick={() => setActiveTab("APPROVED")}
-            >
-              Accepted
-            </button>
-            <button
-              className={activeTab === "REJECTED" ? "active" : ""}
-              onClick={() => setActiveTab("REJECTED")}
-            >
-              Rejected
-            </button>
-          </div>
+        <Link to={backTo} className="admin-req-home-link">
+          ← Back to Requests Portal
+        </Link>
+      </div>
 
-          {/* Loading / Error */}
-          {loading && (
-            <p className="loading-text">
-              Loading {renderTabLabel(activeTab)}...
+      <div className="admin-leave-container">
+        {/* ===== TABS ===== */}
+        <div className="tab-buttons">
+          {Object.entries(TABS).map(([key, label]) => (
+            <button
+              key={key}
+              className={activeTab === key ? "active" : ""}
+              onClick={() => setActiveTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ===== LOADING / ERROR ===== */}
+        {loading && (
+          <p className="loading-text">Loading {entityLabel}...</p>
+        )}
+
+        {/* ===== REQUEST LIST ===== */}
+        <div className="requests-section">
+          {!loading && !error && filteredRequests.length === 0 ? (
+            <p className="no-requests">
+              No {TABS[activeTab].toLowerCase()} in {entityLabel}.
             </p>
-          )}
-          {error && <p className="error-text">{error}</p>}
+          ) : (
+            filteredRequests.map((req) => {
+              const applnNo = req?.application?.applnNo;
+              if (!applnNo) return null;
 
-          {/* Requests list */}
-          <div className="requests-section">
-            {!loading && !error && requests.length === 0 ? (
-              <p className="no-requests">
-                No {renderTabLabel(activeTab).toLowerCase()} in {entityLabel}.
-              </p>
-            ) : (
-              requests.map((req) => (
-                <div key={req.id ?? req.applnNo} className="request-card">
+              return (
+                <div key={applnNo} className="request-card">
                   <div className="request-details">
-                    {renderDetails(req)}
+                    {renderDetails(req.application)}
                     <p>
                       <strong>Status:</strong> {req.status}
                     </p>
                   </div>
 
-                  {req.status === "PENDING" && (
+                  {/* ===== ACTIONS ===== */}
+                  {req.canAct && (
                     <div className="action-buttons">
+                      <textarea
+                        placeholder="Remarks (optional)"
+                        value={remarks[applnNo] || ""}
+                        onChange={(e) =>
+                          setRemarks({
+                            ...remarks,
+                            [applnNo]: e.target.value,
+                          })
+                        }
+                      />
+
                       <button
                         className="accept-btn"
-                        onClick={() =>
-                          handleAction(req.applnNo, "APPROVED")
-                        }
+                        onClick={() => handleApprove(applnNo)}
                       >
                         ✅ Accept
                       </button>
+
                       <button
                         className="reject-btn"
-                        onClick={() =>
-                          handleAction(req.applnNo, "REJECTED")
-                        }
+                        onClick={() => handleReject(applnNo)}
                       >
                         ❌ Reject
                       </button>
                     </div>
                   )}
                 </div>
-              ))
-            )}
-          </div>
+              );
+            })
+          )}
         </div>
       </div>
-
-      <Footer />
     </div>
   );
 };

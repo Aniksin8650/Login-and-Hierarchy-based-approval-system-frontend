@@ -75,8 +75,8 @@ function PrintLeaveApplications() {
           <tr>
             <th>Emp ID</th>
             <th>Name</th>
-            <th>Department</th>
-            <th>Designation</th>
+            <th>Directorate</th>
+            <th>Division</th>
             <th>Reason</th>
             <th>Start Date</th>
             <th>End Date</th>
@@ -91,8 +91,8 @@ function PrintLeaveApplications() {
             <tr key={index}>
               <td>{l.id?.empId || "-"}</td>
               <td>{l.name}</td>
-              <td>{l.department}</td>
-              <td>{l.designation}</td>
+              <td>{l.directorate}</td>
+              <td>{l.division}</td>
               <td>{l.reason}</td>
 
               {/* ✅ Date display with fallbacks */}

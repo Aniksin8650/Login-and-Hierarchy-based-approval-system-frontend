@@ -118,3 +118,25 @@
   font-style: italic;
   font-size: 0.85rem;
 }
+
+.attachments {
+  margin-top: 8px;
+}
+
+.attachments ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.attachments li {
+  margin-bottom: 4px;
+}
+
+.attachments a {
+  color: #4db8ff;
+  text-decoration: none;
+}
+
+.attachments a:hover {
+  text-decoration: underline;
+}

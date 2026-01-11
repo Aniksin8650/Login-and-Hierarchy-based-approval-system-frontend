@@ -5,7 +5,7 @@ const AdminDARequests = () => {
   return (
     <AdminRequestsPage
       title="DA Requests"
-      baseUrl="/api/da"
+      baseUrl="/api/da/approvals"
       entityLabel="DA requests"
       renderDetails={(req) => (
         <>

@@ -66,8 +66,8 @@ const applicationType = location.state?.applicationType ?? "da";
                 ApplnNo: d.applnNo || d.ApplnNo,
                 empId: d.empId,
                 name: d.name,
-                department: d.department,
-                designation: d.designation,
+                directorate: d.directorate,
+                division: d.division,
                 reason: d.reason,
                 startDate: d.startDate,
                 endDate: d.endDate,
@@ -111,8 +111,8 @@ const applicationType = location.state?.applicationType ?? "da";
 
       const empId = u.empId || "";
       const name = u.name || "";
-      const department = u.department || "";
-      const designation = u.designation || "";
+      const directorate = u.directorate || "";
+      const division = u.division || "";
       const rawPhone = u.phone ? String(u.phone) : "";
       const cleanedPhone = rawPhone.replace(/\D/g, "").slice(0, 10);
 
@@ -120,8 +120,8 @@ const applicationType = location.state?.applicationType ?? "da";
       setEmployeeData({
         empId,
         name,
-        department,
-        designation,
+        directorate,
+        division,
       });
       setContact(cleanedPhone);
 
@@ -195,8 +195,8 @@ const applicationType = location.state?.applicationType ?? "da";
     formData.append("empId", employeeData.empId || employeeId);
     formData.append("applicationType", applicationType);
     formData.append("name", employeeData.name || "");
-    formData.append("department", employeeData.department || "");
-    formData.append("designation", employeeData.designation || "");
+    formData.append("directorate", employeeData.directorate || "");
+    formData.append("division", employeeData.division || "");
     formData.append("reason", reason);
     formData.append("startDate", startDate);
     formData.append("endDate", endDate);
@@ -301,8 +301,8 @@ const applicationType = location.state?.applicationType ?? "da";
     setEmployeeData({
       empId: app.empId,
       name: app.name,
-      department: app.department,
-      designation: app.designation,
+      directorate: app.directorate,
+      division: app.division,
     });
     setReason(app.reason || "");
     setStartDate(app.startDate || "");
@@ -579,19 +579,19 @@ const applicationType = location.state?.applicationType ?? "da";
           </div>
 
           <div className="form-row">
-            <label>Department:</label>
+            <label>Directorate:</label>
             <input
               type="text"
-              value={employeeData.department || ""}
+              value={employeeData.directorate || ""}
               readOnly
             />
           </div>
 
           <div className="form-row">
-            <label>Designation:</label>
+            <label>Division:</label>
             <input
               type="text"
-              value={employeeData.designation || ""}
+              value={employeeData.division || ""}
               readOnly
             />
           </div>

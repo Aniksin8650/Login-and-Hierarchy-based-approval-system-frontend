@@ -5,7 +5,7 @@ const AdminLTCRequests = () => {
   return (
     <AdminRequestsPage
       title="LTC Requests"
-      baseUrl="/api/ltc"
+      baseUrl="/api/ltc/approvals"
       entityLabel="LTC requests"
       renderDetails={(req) => (
         <>

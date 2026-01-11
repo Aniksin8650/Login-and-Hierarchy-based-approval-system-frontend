@@ -1,9 +1,13 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
+
 /* 🔹 Shared Layout */
 import NavbarSwitcher from "./components/Shared/Navbar/NavbarSwitcher";
 import Footer from "./components/Shared/Footer";
+import "./components/Shared/toast.css";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 /* 🌐 Public Pages */
 import Home from "./components/Shared/Home";
@@ -23,7 +27,7 @@ import PrintLeaveApplications from "./components/Leave/PrintLeaveApplications";
 
 /* 🔐 Legacy Admin (KEEP – backward compatibility) */
 import AdminDashboard from "./components/Admin/AdminDashboard";
-import AdminApplyPortal from "./components/Admin/AdminApplyPortal";
+// import AdminApplyPortal from "./components/Admin/AdminApplyPortal";
 import AdminRequestsPortal from "./components/Admin/AdminRequestsPortal";
 import RequireRole from "./components/Shared/RequireRole";
 
@@ -80,7 +84,7 @@ function App() {
               {/* APPLY */}
               <Route path="apply">
                 {/* default apply page */}
-                <Route index element={<LeaveApplication />} />
+                <Route index element={<Dashboard />} />
 
                 <Route path="leave" element={<LeaveApplication />} />
                 <Route path="ta" element={<TAApplication />} />
@@ -100,6 +104,8 @@ function App() {
             </Route>
           </Routes>
         </div>
+        <ToastContainer position="top-right" autoClose={3000} />
+
 
         {/* 🔽 Footer */}
         <Footer />

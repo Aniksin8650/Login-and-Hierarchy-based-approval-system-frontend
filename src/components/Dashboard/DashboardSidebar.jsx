@@ -88,17 +88,57 @@ const DashboardSidebar = ({ open, onClose }) => {
 
   /* ================= REQUEST COUNTS (UNCHANGED – DUMMY) ================= */
 
-  const requestCounts = {
-    leave: 3,
-    ta: 1,
-    da: 0,
-    ltc: 2,
-  };
+  const [requestCounts, setRequestCounts] = useState({
+    leave: null,
+    ta: null,
+    da: null,
+    ltc: null,
+  });
+
+  useEffect(() => {
+    if (!empId || !canApprove) return;
+
+    const BASE_URL = "http://localhost:8080";
+
+    const fetchRequestCount = async (url, key) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          setRequestCounts((p) => ({ ...p, [key]: null }));
+          return;
+        }
+        const text = await res.text();
+        const num = parseInt(text, 10);
+        setRequestCounts((p) => ({ ...p, [key]: isNaN(num) ? null : num }));
+      } catch {
+        setRequestCounts((p) => ({ ...p, [key]: null }));
+      }
+    };
+
+    fetchRequestCount(
+      `${BASE_URL}/api/leave/approvals/count/pending-for-me?empId=${empId}`,
+      "leave"
+    );
+    fetchRequestCount(
+      `${BASE_URL}/api/ta/approvals/count/pending-for-me?empId=${empId}`,
+      "ta"
+    );
+    fetchRequestCount(
+      `${BASE_URL}/api/da/approvals/count/pending-for-me?empId=${empId}`,
+      "da"
+    );
+    fetchRequestCount(
+      `${BASE_URL}/api/ltc/approvals/count/pending-for-me?empId=${empId}`,
+      "ltc"
+    );
+  }, [empId, canApprove, open]);
+
 
   const totalRequestPending = Object.values(requestCounts).reduce(
-    (a, b) => a + b,
+    (sum, v) => sum + (typeof v === "number" ? v : 0),
     0
   );
+
 
   return (
     <>

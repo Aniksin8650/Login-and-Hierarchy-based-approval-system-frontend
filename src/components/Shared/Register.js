@@ -33,7 +33,7 @@ function Register() {
 
     try {
       const res = await fetch(
-        `http://localhost:8080/api/employees/id/${fullId}`
+        `http://localhost:8080/api/auth/register/fetch/${fullId}`
       );
       if (!res.ok) {
         setEmployeeData(null);
@@ -149,10 +149,10 @@ function Register() {
                   <strong>Name:</strong> {employeeData.name}
                 </p>
                 <p>
-                  <strong>Department:</strong> {employeeData.department}
+                  <strong>Directorate:</strong> {employeeData.directorate}
                 </p>
                 <p>
-                  <strong>Designation:</strong> {employeeData.designation}
+                  <strong>Division:</strong> {employeeData.division}
                 </p>
                 <p>
                   <strong>Phone:</strong> {employeeData.phone}

@@ -9,8 +9,8 @@ const Settings = () => {
   // ---- User profile fields (from LoginResponse) ----
   const [empId, setEmpId] = useState("");
   const [name, setName] = useState("");
-  const [department, setDepartment] = useState("");
-  const [designation, setDesignation] = useState("");
+  const [directorate, setDirectorate] = useState("");
+  const [division, setDivision] = useState("");
   const [role, setRole] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -43,8 +43,8 @@ const Settings = () => {
 
       setEmpId(u.empId || "");
       setName(u.name || "");
-      setDepartment(u.department || "");
-      setDesignation(u.designation || "");
+      setDirectorate(u.directorate || "");
+      setDivision(u.division || "");
       setRole(u.role || "");
       setPhone(u.phone || "");
       setEmail(u.email || "");
@@ -70,8 +70,8 @@ const Settings = () => {
         ...original,
         empId,
         name,
-        department,
-        designation,
+        directorate,
+        division,
         role,
         phone,
         email,
@@ -219,20 +219,20 @@ const Settings = () => {
 
             <div className="settings-field-grid">
               <div className="settings-field">
-                <label>Department</label>
+                <label>Directorate</label>
                 <input
                   type="text"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
+                  value={directorate}
+                  onChange={(e) => setDirectorate(e.target.value)}
                   disabled
                 />
               </div>
               <div className="settings-field">
-                <label>Designation</label>
+                <label>Division</label>
                 <input
                   type="text"
-                  value={designation}
-                  onChange={(e) => setDesignation(e.target.value)}
+                  value={division}
+                  onChange={(e) => setDivision(e.target.value)}
                   disabled
                 />
               </div>
@@ -321,7 +321,7 @@ const Settings = () => {
               <label>Profile Visibility</label>
               <select>
                 <option>Visible to admins only</option>
-                <option>Visible within department</option>
+                <option>Visible within directorate</option>
                 <option>Visible to all employees</option>
               </select>
             </div>

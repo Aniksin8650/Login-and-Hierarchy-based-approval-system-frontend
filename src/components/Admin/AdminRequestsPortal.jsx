@@ -6,91 +6,101 @@ import "./AdminRequestsPortal.css";
 const API_BASE = "http://localhost:8080";
 
 const AdminRequestsPortal = () => {
-  const [leaveCounts, setLeaveCounts] = useState({
-    pending: 0,
-    approved: 0,
-    rejected: 0,
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  const empId = user?.empId;
+  const directorate = user?.directorate;
+  const division = user?.division;
+  const roleNo = user?.primaryRole?.roleNo;
+  const isDirector = roleNo <= 10;
+
+  const [counts, setCounts] = useState({
+    leave: 0,
+    ta: 0,
+    da: 0,
+    ltc: 0,
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchLeaveCounts = async () => {
+    const fetchCounts = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const statuses = ["PENDING", "APPROVED", "REJECTED"];
+        const commonParams = { empId };
 
-        const responses = await Promise.all(
-          statuses.map((status) =>
-            axios.get(`${API_BASE}/api/leave/status/${status}`)
-          )
-        );
 
-        const [pendingRes, approvedRes, rejectedRes] = responses;
+        const [
+          leaveRes,
+          taRes,
+          daRes,
+          ltcRes,
+        ] = await Promise.all([
+          axios.get(`${API_BASE}/api/leave/approvals/count/pending-for-me`, { params: commonParams }),
+          axios.get(`${API_BASE}/api/ta/approvals/count/pending-for-me`, { params: commonParams }),
+          axios.get(`${API_BASE}/api/da/approvals/count/pending-for-me`, { params: commonParams }),
+          axios.get(`${API_BASE}/api/ltc/approvals/count/pending-for-me`, { params: commonParams }),
+        ]);
 
-        setLeaveCounts({
-          pending: pendingRes.data?.length ?? 0,
-          approved: approvedRes.data?.length ?? 0,
-          rejected: rejectedRes.data?.length ?? 0,
+        setCounts({
+          leave: leaveRes.data,
+          ta: taRes.data,
+          da: daRes.data,
+          ltc: ltcRes.data,
         });
       } catch (err) {
         console.error(err);
         setError(
           err.response?.data ||
-            "Unable to load leave request counts right now."
+            "Unable to load request counts right now."
         );
       } finally {
         setLoading(false);
       }
     };
-
-    fetchLeaveCounts();
-  }, []);
+    if (empId && directorate && division && roleNo !== undefined) {
+      fetchCounts();
+    }
+  }, [empId, directorate, division, roleNo, isDirector]);
 
   return (
     <div className="admin-req">
       <div className="admin-req-header">
         <div>
-          <p className="admin-req-badge">Admin • Requests</p>
-          <h1>Review Employee Requests</h1>
+          <p className="admin-req-badge">Requests</p>
+          <h1>Review Requests Pending for You</h1>
           <p className="admin-req-subtitle">
-            View, filter, and take action on employee Leave, TA, DA and LTC
-            requests from a single place.
+            Requests routed to you based on role, directorate and division.
           </p>
         </div>
 
         <Link to="/admin-dashboard" className="admin-req-home-link">
-          ← Back to Admin Dashboard
+          ← Back to Dashboard
         </Link>
       </div>
 
-      <div className="admin-req-summary">
-        <div className="req-chip">
-          Pending {loading ? "…" : `(${leaveCounts.pending})`}
-        </div>
-        <div className="req-chip req-chip-soft">
-          Approved {loading ? "…" : `(${leaveCounts.approved})`}
-        </div>
-        <div className="req-chip req-chip-soft">
-          Rejected {loading ? "…" : `(${leaveCounts.rejected})`}
-        </div>
-        <span className="req-chip-hint">
-          Currently showing counts for <strong>Leave</strong> applications.
-          TA / DA / LTC can be wired with similar endpoints.
-        </span>
-      </div>
-
-      {error && <p className="admin-req-error">{error}</p>}
+      {error && (
+        <p className="admin-req-error">
+          {typeof error === "string"
+          ? error
+          : error?.message || JSON.stringify(error)}
+        </p>
+      )}
 
       <div className="admin-req-grid">
-        <Link to="/admin/requests/leave" className="req-card">
+        {/* LEAVE */}
+        <Link to="/dashboard/requests/leave" className="req-card">
           <div className="req-card-header">
             <span className="req-card-icon req-card-icon-green">📝</span>
             <div>
               <h2>Leave Requests</h2>
-              <p>All pending and processed leave applications.</p>
+              <p>
+                Pending{" "}
+                {loading ? "…" : `(${counts.leave})`}
+              </p>
             </div>
           </div>
           <div className="req-card-footer">
@@ -101,50 +111,62 @@ const AdminRequestsPortal = () => {
           </div>
         </Link>
 
-        <Link to="/admin/requests/ta" className="req-card">
+        {/* TA */}
+        <Link to="/dashboard/requests/ta" className="req-card">
           <div className="req-card-header">
             <span className="req-card-icon req-card-icon-blue">🚆</span>
             <div>
               <h2>TA Requests</h2>
-              <p>Travel allowance claims from employees.</p>
+              <p>
+                Pending{" "}
+                {loading ? "…" : `(${counts.ta})`}
+              </p>
             </div>
           </div>
           <div className="req-card-footer">
             <span className="req-card-status-dot"></span>
             <span className="req-card-footer-text">
-              Check journey details & amount
+              Verify journeys & amounts
             </span>
           </div>
         </Link>
 
-        <Link to="/admin/requests/da" className="req-card">
+        {/* DA */}
+        <Link to="/dashboard/requests/da" className="req-card">
           <div className="req-card-header">
             <span className="req-card-icon req-card-icon-amber">🍽️</span>
             <div>
               <h2>DA Requests</h2>
-              <p>Daily allowance requests for official tours.</p>
+              <p>
+                Pending{" "}
+                {loading ? "…" : `(${counts.da})`}
+              </p>
             </div>
           </div>
           <div className="req-card-footer">
             <span className="req-card-status-dot"></span>
             <span className="req-card-footer-text">
-              Verify eligibility and approve
+              Check eligibility & approve
             </span>
           </div>
         </Link>
 
-        <Link to="/admin/requests/ltc" className="req-card">
+        {/* LTC */}
+        <Link to="/dashboard/requests/ltc" className="req-card">
           <div className="req-card-header">
             <span className="req-card-icon req-card-icon-purple">📂</span>
             <div>
               <h2>LTC Requests</h2>
-              <p>LTC request types handled by admin.</p>
+              <p>
+                Pending{" "}
+                {loading ? "…" : `(${counts.ltc})`}
+              </p>
             </div>
           </div>
           <div className="req-card-footer">
             <span className="req-card-status-dot"></span>
             <span className="req-card-footer-text">
-              Open LTC requests dashboard
+              Open LTC dashboard
             </span>
           </div>
         </Link>
