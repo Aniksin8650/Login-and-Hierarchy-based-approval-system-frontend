@@ -24,6 +24,7 @@ function Login() {
 
   // Role popup
   const [roles, setRoles] = useState([]);
+  const [primaryRole, setPrimaryRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
   const [showRolePopup, setShowRolePopup] = useState(false);
 
@@ -75,12 +76,15 @@ function Login() {
       showToast(`Welcome ${user.name}!`, "success");
 
       const fetchedRoles = user.roles || [];
+      const backendPrimary = user.primaryRole || null;
 
-      // 🔹 ALWAYS show role popup
       setRoles(fetchedRoles);
+      setPrimaryRole(backendPrimary);
 
-      // 🔹 If only one role, auto-select it
-      if (fetchedRoles.length === 1) {
+      // 🔥 Auto-select PRIMARY role
+      if (backendPrimary) {
+        setSelectedRole(backendPrimary);
+      } else if (fetchedRoles.length === 1) {
         setSelectedRole(fetchedRoles[0]);
       } else {
         setSelectedRole(null);
@@ -108,7 +112,10 @@ function Login() {
     const baseUser = JSON.parse(localStorage.getItem("userInfo"));
     localStorage.setItem(
       "user",
-      JSON.stringify({ ...baseUser, activeRole: selectedRole })
+      JSON.stringify({
+        ...baseUser,
+        activeRole: selectedRole,   // 🔥 THIS is what backend approvals will use
+      })
     );
 
     setShowRolePopup(false);
@@ -203,35 +210,54 @@ function Login() {
             <h3>Select Role</h3>
 
             {roles.map((r, idx) => {
-              const singleRole = roles.length === 1;
-              const checked = singleRole || selectedRole === r;
+              const isPrimary =
+                primaryRole &&
+                r.roleNo === primaryRole.roleNo &&
+                r.dte === primaryRole.dte &&
+                r.div === primaryRole.div;
+
+              const checked =
+                selectedRole &&
+                r.roleNo === selectedRole.roleNo &&
+                r.dte === selectedRole.dte &&
+                r.div === selectedRole.div;
 
               return (
                 <label
                   key={idx}
                   className={`role-option ${
-                    singleRole ? "single-role" : ""
+                    isPrimary ? "primary-role" : "secondary-role"
                   }`}
                 >
                   <input
                     type="radio"
                     name="role"
                     checked={checked}
-                    disabled={singleRole}
                     onChange={() => setSelectedRole(r)}
                   />
+
                   <div>
-                    <strong>{r.roleName}</strong>
+                    <strong>
+                      {r.roleName}
+                      {isPrimary && " ⭐"}
+                    </strong>
+
                     <div className="role-sub">
-                      {r.directorate} → {r.division}
+                      {r.dte} → {r.div}
                     </div>
+
+                    {isPrimary ? (
+                      <div className="role-tag primary">PRIMARY</div>
+                    ) : (
+                      <div className="role-tag secondary">SECONDARY</div>
+                    )}
                   </div>
                 </label>
               );
             })}
 
             <button className="login-btn" onClick={confirmRoleLogin}>
-              Login
+              Continue
             </button>
           </div>
         </div>

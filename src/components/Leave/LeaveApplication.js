@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import "./LeaveApplication.css";
 import "../Shared/AttachFile.css";
 import { useLocation } from "react-router-dom";
+import ApprovalAuditView from "../Shared/ApprovalAuditView";
 
 import AttachFile from "../Shared/AttachFile";
 import { formatFileNameForDisplay } from "../Shared/fileNameUtils";
@@ -36,6 +37,10 @@ const applicationType = location.state?.applicationType ?? "leave";
   // 🔔 Toast state
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState("info");
+
+  // 🔍 Approval audit view
+  const [showAudit, setShowAudit] = useState(false);
+  const [auditData, setAuditData] = useState(null);
 
   const API_BASE =
     process.env.REACT_APP_API_BASE_URL || "http://localhost:8080";
@@ -88,6 +93,30 @@ const applicationType = location.state?.applicationType ?? "leave";
     },
     [API_BASE]
   );
+
+  //Approval History
+   const fetchAudit = async (applnNo) => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/leave/approvals/approval-history/${applnNo}`
+      );
+      if (!res.ok) {
+        showToast("Failed to load approval history.", "error");
+        return;
+      }
+
+      const data = await res.json();
+      setAuditData({
+        applnNo,
+        applicationStatus: data.applicationStatus,
+        ...data,
+      });
+      setShowAudit(true);
+    } catch (e) {
+      console.error(e);
+      showToast("Error loading approval audit.", "error");
+    }
+  };
 
   // Load logged-in user from localStorage
   const loadUserFromLocal = useCallback(() => {
@@ -524,6 +553,12 @@ const applicationType = location.state?.applicationType ?? "leave";
 
   return (
     <>
+      {/*Audit History view*/}
+      <ApprovalAuditView
+        open={showAudit}
+        audit={auditData}
+        onClose={() => setShowAudit(false)}
+      />
       {/* 🔔 Toast */}
       {message && (
         <div className={`toast toast-${messageType}`}>{message}</div>
@@ -811,6 +846,7 @@ const applicationType = location.state?.applicationType ?? "leave";
                   <th>Reason</th>
                   <th>Files</th>
                   <th>Status</th>
+                  <th>Approval History</th>
                 </tr>
               </thead>
               <tbody>
@@ -872,6 +908,15 @@ const applicationType = location.state?.applicationType ?? "leave";
                             {app.status}
                           </span>
                         )}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="audit-btn"
+                          onClick={() => fetchAudit(app.ApplnNo)}
+                        >
+                          View Audit
+                        </button>
                       </td>
                     </tr>
                   ))

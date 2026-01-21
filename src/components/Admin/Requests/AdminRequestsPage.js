@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-
 import "../AdminDashboard.css";
 import "./AdminLeaveRequests.css";
 import "../AdminRequestsPortal.css";
@@ -33,6 +32,8 @@ const AdminRequestsPage = ({
 
   const user = JSON.parse(localStorage.getItem("user"));
   const empId = user?.empId;
+  const activeRole = user?.activeRole;          // 🔥 NEW
+  const roleNo = activeRole?.roleNo;            // 🔥 NEW
 
   /* ================= STATE ================= */
 
@@ -47,7 +48,6 @@ const AdminRequestsPage = ({
     if (err?.response?.data?.message) return err.response.data.message;
     return fallback;
   };
-
 
   /* ================= FETCH REQUESTS ================= */
 
@@ -65,7 +65,7 @@ const AdminRequestsPage = ({
     } catch (err) {
       toast.error(
         getErrorMessage(err, `Failed to load ${entityLabel}. Please try again.`)
-  );
+      );
     } finally {
       setLoading(false);
     }
@@ -77,67 +77,81 @@ const AdminRequestsPage = ({
 
   /* ================= ACTION HANDLERS ================= */
 
-const handleApprove = async (applnNo) => {
-  try {
-    await axios.post(`${API_BASE}${baseUrl}/${applnNo}/approve`, null, {
-      params: { approverId: empId, remarks: remarks[applnNo] || "" },
-    });
+  const handleApprove = async (applnNo) => {
 
-    toast.success("Request approved successfully");
-    fetchRequests();
-  } catch (err) {
-    toast.error(getErrorMessage(err, "You are not the correct approval authority"));
-  }
-};
+    if (!roleNo) {
+      toast.error("No active role selected. Please login again.");
+      return;
+    }
 
-const handleReject = async (applnNo) => {
-  try {
-    await axios.post(`${API_BASE}${baseUrl}/${applnNo}/reject`, null, {
-      params: { approverId: empId, remarks: remarks[applnNo] || "" },
-    });
+    try {
+      await axios.post(`${API_BASE}${baseUrl}/${applnNo}/approve`, null, {
+        params: {
+          approverId: empId,
+          roleNo: roleNo,                         // 🔥 FIX
+          remarks: remarks[applnNo] || "",
+        },
+      });
 
-    toast.success("Request rejected successfully");
-    fetchRequests();
-  } catch (err) {
-    toast.error(getErrorMessage(err, "Failed to reject request"));
-  }
-};
+      toast.success("Request approved successfully");
+      fetchRequests();
+    } catch (err) {
+      toast.error(
+        getErrorMessage(err, "You are not the correct approval authority")
+      );
+    }
+  };
 
+  const handleReject = async (applnNo) => {
 
+    if (!roleNo) {
+      toast.error("No active role selected. Please login again.");
+      return;
+    }
 
-/* ================= TAB FILTERING (FINAL & CORRECT) ================= */
+    try {
+      await axios.post(`${API_BASE}${baseUrl}/${applnNo}/reject`, null, {
+        params: {
+          approverId: empId,
+          roleNo: roleNo,                         // 🔥 FIX
+          remarks: remarks[applnNo] || "",
+        },
+      });
 
-const filteredRequests = requests.filter((r) => {
-  const { status, actedByMe, myAction, canAct } = r;
+      toast.success("Request rejected successfully");
+      fetchRequests();
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to reject request"));
+    }
+  };
 
-  // 🟡 Waiting for my action
-  if (activeTab === "PENDING") {
-    return canAct === true;
-  }
+  /* ================= TAB FILTERING ================= */
 
-  // 🔵 I approved, now waiting for higher authority
-  if (activeTab === "FORWARDED") {
-    return actedByMe && myAction === "APPROVED" && status === "IN_APPROVAL";
-  }
+  const filteredRequests = requests.filter((r) => {
+    const { status, actedByMe, myAction, canAct } = r;
 
-  // 🟢 Fully approved (my approval was final)
-  if (activeTab === "APPROVED") {
-    return actedByMe && myAction === "APPROVED" && status === "APPROVED";
-  }
+    if (activeTab === "PENDING") {
+      return canAct === true;
+    }
 
-  // 🔴 I personally rejected
-  if (activeTab === "REJECTED") {
-    return actedByMe && myAction === "REJECTED";
-  }
+    if (activeTab === "FORWARDED") {
+      return actedByMe && myAction === "APPROVED" && status === "IN_APPROVAL";
+    }
 
-  // ⚫ I approved, but higher authority rejected later
-  if (activeTab === "REJECTED_BY_HIGHER") {
-    return actedByMe && myAction === "APPROVED" && status === "REJECTED";
-  }
+    if (activeTab === "APPROVED") {
+      return actedByMe && myAction === "APPROVED" && status === "APPROVED";
+    }
 
-  return false;
-});
+    if (activeTab === "REJECTED") {
+      return actedByMe && myAction === "REJECTED";
+    }
 
+    if (activeTab === "REJECTED_BY_HIGHER") {
+      return actedByMe && myAction === "APPROVED" && status === "REJECTED";
+    }
+
+    return false;
+  });
 
   /* ================= RENDER ================= */
 
@@ -197,7 +211,6 @@ const filteredRequests = requests.filter((r) => {
                     </p>
                   </div>
 
-                  {/* ===== ACTIONS ===== */}
                   {req.canAct && (
                     <div className="action-buttons">
                       <textarea
