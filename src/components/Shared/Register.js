@@ -9,7 +9,7 @@ const buildEmpId = (digits) => {
 };
 
 function Register() {
-  const [empId, setEmpId] = useState(""); // only digits like "2", "12", "007"
+  const [empId, setEmpId] = useState("");
   const [employeeData, setEmployeeData] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,14 +35,22 @@ function Register() {
       const res = await fetch(
         `http://localhost:8080/api/auth/register/fetch/${fullId}`
       );
-      if (!res.ok) {
+
+      if (res.status === 404) {
         setEmployeeData(null);
         showToast("Employee not found", "error");
         return;
       }
+
+      if (!res.ok) {
+        showToast("Server error while fetching employee", "error");
+        return;
+      }
+
       const data = await res.json();
       setEmployeeData(data);
       showToast("Employee details loaded", "success");
+
     } catch (err) {
       console.error("Fetch employee error:", err);
       showToast("Server error while fetching employee", "error");
@@ -68,10 +76,6 @@ function Register() {
     }
 
     const fullId = buildEmpId(empId);
-    if (!fullId) {
-      showToast("Please enter Employee ID", "error");
-      return;
-    }
 
     setLoading(true);
     try {
@@ -81,12 +85,12 @@ function Register() {
         body: JSON.stringify({ empId: fullId, password: newPassword }),
       });
 
-      const text = await res.text();
-
-      if (!res.ok) {
-        showToast(text || "Registration failed", "error");
+      if (res.status === 409) {
+        showToast("Employee already registered", "error");
+      } else if (!res.ok) {
+        showToast("Registration failed", "error");
       } else {
-        showToast(text || "Registration successful!", "success");
+        showToast("Registration successful!", "success");
         setNewPassword("");
         setConfirmPassword("");
       }
@@ -145,20 +149,13 @@ function Register() {
 
             {employeeData && (
               <div className="employee-preview">
+                <p><strong>Name:</strong> {employeeData.name}</p>
+                <p><strong>Directorate:</strong> {employeeData.directorate}</p>
+                <p><strong>Division:</strong> {employeeData.division}</p>
+                <p><strong>Phone:</strong> {employeeData.phone}</p>
                 <p>
-                  <strong>Name:</strong> {employeeData.name}
-                </p>
-                <p>
-                  <strong>Directorate:</strong> {employeeData.directorate}
-                </p>
-                <p>
-                  <strong>Division:</strong> {employeeData.division}
-                </p>
-                <p>
-                  <strong>Phone:</strong> {employeeData.phone}
-                </p>
-                <p>
-                  <strong>Role:</strong> {employeeData.role}
+                  <strong>Role:</strong>{" "}
+                  {employeeData?.primaryRole?.roleName}
                 </p>
               </div>
             )}
@@ -186,7 +183,6 @@ function Register() {
             <div className="password-policy-note">
               Passwords will expire every 3 months. You will be reminded in the last 7 days.
             </div>
-            
           </form>
         </div>
       </div>

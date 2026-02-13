@@ -166,6 +166,28 @@ const applicationType = location.state?.applicationType ?? "leave";
       }));
   };
 
+  const handleFinalSubmit = async (applnNo) => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/leave/final-submit/${applnNo}`,
+        { method: "PUT" }
+      );
+
+      if (!res.ok) {
+        showToast("Failed to send request.", "error");
+        return;
+      }
+
+      showToast("Request sent for approval.", "success");
+      loadLeaveApplications(employeeId);
+
+    } catch (err) {
+      console.error(err);
+      showToast("Server error.", "error");
+    }
+  };
+
+
   const getInputClass = (field) =>
     submitAttempted && errors[field] ? "input-error" : "";
 
@@ -306,9 +328,9 @@ const applicationType = location.state?.applicationType ?? "leave";
   const handleEdit = async (index) => {
     const app = applications[index];
     
-    if (app.status !== "PENDING") {
-    showToast("Only pending applications can be edited.", "info");
-    return;
+    if (app.status !== "DRAFT") {
+  showToast("Only draft applications can be edited.", "info");
+  return;
   }
 
     setEmployeeId(app.empId);
@@ -884,25 +906,35 @@ const applicationType = location.state?.applicationType ?? "leave";
                         )}
                       </td>
                       <td>
-                        {app.status === "PENDING" ? (
-                          <button
-                            className="edit-btn"
-                            onClick={() =>
-                              handleEdit(
-                                applications.findIndex(
-                                  (a) => a.ApplnNo === app.ApplnNo
+                        {app.status === "DRAFT" ? (
+
+                          <div className="action-btn-group">
+                            <button
+                              className="edit-btn"
+                              onClick={() =>
+                                handleEdit(
+                                  applications.findIndex((a) => a.ApplnNo === app.ApplnNo)
                                 )
-                              )
-                            }
-                          >
-                            Edit
-                          </button>
+                              }
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              className="final-submit-btn"
+                              onClick={() => handleFinalSubmit(app.ApplnNo)}
+                            >
+                              Send Request
+                            </button>
+                          </div>
                         ) : (
                           <span
                             className={
                               app.status === "APPROVED"
                                 ? "status-approved"
-                                : "status-rejected"
+                                : app.status === "REJECTED"
+                                ? "status-rejected"
+                                : "status-pending"
                             }
                           >
                             {app.status}

@@ -25,6 +25,7 @@ const DashboardSidebar = ({ open, onClose }) => {
   const roleNo = role?.roleNo;
   const division = role?.division;
   const directorate = role?.directorate;
+  const program = userInfo?.program;
 
   const initials =
     user?.name
@@ -36,9 +37,7 @@ const DashboardSidebar = ({ open, onClose }) => {
 
   /* ================= CAPABILITIES ================= */
 
-  const canApprove = ["DIVISION", "DIRECTOR", "ADMIN", "FINANCE"].some((r) =>
-    roleKey.includes(r)
-  );
+  const canApprove = roleNo && roleNo < 100;
 
   /* ================= ROUTE STATE ================= */
 
@@ -163,6 +162,7 @@ const DashboardSidebar = ({ open, onClose }) => {
                 {roleNo && <span>{roleNo}</span>}
                 {division && <span> • {division}</span>}
                 {directorate && <span> • {directorate}</span>}
+                {program && <span> • {program}</span>}
               </p>
             </div>
           </div>
