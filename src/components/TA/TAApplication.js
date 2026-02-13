@@ -378,6 +378,28 @@ const applicationType = location.state?.applicationType ?? "ta";
     }
   };
 
+  const handleFinalSubmit = async (applnNo) => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/ta/final-submit/${applnNo}`,
+        { method: "PUT" }
+      );
+
+      if (!res.ok) {
+        showToast("Failed to send request.", "error");
+        return;
+      }
+
+      showToast("Request sent for approval.", "success");
+      loadTAApplications(employeeId);
+
+    } catch (err) {
+      console.error(err);
+      showToast("Server error.", "error");
+    }
+  };
+
+
   // -------- Edit handler --------
   const handleEdit = async (index) => {
     const app = applications[index];
@@ -1113,21 +1135,32 @@ const applicationType = location.state?.applicationType ?? "ta";
                       )}
                     </td>
                     <td>
-                      {app.status === "PENDING" ? (
-                        <button
-                          className="edit-btn"
-                          onClick={() =>
-                            handleEdit(
-                              applications.findIndex(
-                                (x) => x.ApplnNo === app.ApplnNo
-                              )
-                            )
+                      {app.status === "DRAFT" ? (
+                        <div className="action-btn-group">
+                          <button
+                            className="edit-btn"
+                            onClick={() => handleEdit(index)}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="final-submit-btn"
+                            onClick={() => handleFinalSubmit(app.ApplnNo)}
+                          >
+                            Send Request
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          className={
+                            app.status === "APPROVED"
+                              ? "status-approved"
+                              : app.status === "REJECTED"
+                              ? "status-rejected"
+                              : "status-pending"
                           }
                         >
-                          Edit
-                        </button>
-                      ) : (
-                        <span className={`status-text status-${app.status.toLowerCase()}`}>
                           {app.status}
                         </span>
                       )}

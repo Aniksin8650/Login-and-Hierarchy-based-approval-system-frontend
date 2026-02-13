@@ -218,3 +218,17 @@
   overflow-y: auto;
   margin-top: 10px;
 }
+
+.final-submit-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+.final-submit-btn:hover {
+  background: #1e7e34;
+}
