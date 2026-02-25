@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import "./Register.css";
+import { authFetch } from "../Shared/authFetch";
+
 
 const buildEmpId = (digits) => {
   const clean = (digits || "").replace(/\D/g, "");
@@ -32,8 +34,8 @@ function Register() {
     }
 
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/auth/register/fetch/${fullId}`
+      const res = await authFetch(
+        `http://localhost:8080/api/auth/register/authFetch/${fullId}`
       );
 
       if (res.status === 404) {
@@ -61,7 +63,7 @@ function Register() {
     e.preventDefault();
 
     if (!employeeData) {
-      showToast("Please fetch employee details first", "error");
+      showToast("Please authFetch employee details first", "error");
       return;
     }
 
@@ -79,7 +81,7 @@ function Register() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/auth/register", {
+      const res = await authFetch("http://localhost:8080/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ empId: fullId, password: newPassword }),
@@ -140,7 +142,7 @@ function Register() {
               </div>
               <button
                 type="button"
-                className="fetch-btn"
+                className="authFetch-btn"
                 onClick={fetchEmployee}
               >
                 Fetch

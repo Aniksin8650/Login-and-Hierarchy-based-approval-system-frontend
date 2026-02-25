@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import axios from "../../../utils/axiosConfig";
 import { toast } from "react-toastify";
-
 import "../AdminDashboard.css";
 import "./AdminLeaveRequests.css";
 import "../AdminRequestsPortal.css";

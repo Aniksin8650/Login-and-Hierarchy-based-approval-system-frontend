@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 import PasswordExpiryBanner from "./PasswordExpiryBanner";
+import { authFetch } from "../Shared/authFetch";
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -69,7 +71,7 @@ const Dashboard = () => {
 
     const fetchCount = async (url, setter) => {
       try {
-        const res = await fetch(url);
+        const res = await authFetch(url);
         if (!res.ok) {
           setter(null);
           return;

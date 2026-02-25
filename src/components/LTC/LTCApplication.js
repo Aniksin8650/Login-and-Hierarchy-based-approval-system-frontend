@@ -6,6 +6,8 @@ import ApprovalAuditView from "../Shared/ApprovalAuditView";
 
 import AttachFile from "../Shared/AttachFile";
 import { formatFileNameForDisplay } from "../Shared/fileNameUtils";
+import { authFetch } from "../Shared/authFetch";
+
 
 function LTCApplication() {
 const location = useLocation();
@@ -59,7 +61,7 @@ const applicationType = location.state?.applicationType ?? "ltc";
     async (empId) => {
       if (!empId) return;
       try {
-        const res = await fetch(`${API_BASE}/api/ltc/empId/${empId}`);
+        const res = await authFetch(`${API_BASE}/api/ltc/empId/${empId}`);
         if (res.ok) {
           const data = await res.json();
           const mapped = Array.isArray(data)
@@ -77,7 +79,7 @@ const applicationType = location.state?.applicationType ?? "ltc";
                 destination: d.travelDestination || d.destination || "",
                 familyCount: d.familyMembers || d.familyCount || "",
                 claimYear: d.claimYear,
-                status: (d.status || "PENDING").toUpperCase(),
+                status: (d.status || "DRAFT").toUpperCase(),
                 files: d.fileName
                   ? d.fileName
                       .split(";")
@@ -103,8 +105,8 @@ const applicationType = location.state?.applicationType ?? "ltc";
   //Approval History
    const fetchAudit = async (applnNo) => {
     try {
-      const res = await fetch(
-        `${API_BASE}/api/ltcC/approvals/approval-history/${applnNo}`
+      const res = await authFetch(
+        `${API_BASE}/api/ltc/approvals/approval-history/${applnNo}`
       );
       if (!res.ok) {
         showToast("Failed to load approval history.", "error");
@@ -262,7 +264,7 @@ const applicationType = location.state?.applicationType ?? "ltc";
           : `${API_BASE}/api/ltc/submit`;
       const method = editingIndex !== null ? "PUT" : "POST";
 
-      const res = await fetch(url, { method, body: formData });
+      const res = await authFetch(url, { method, body: formData });
 
       console.log("LTC submit status:", res.status);
 
@@ -318,7 +320,7 @@ const applicationType = location.state?.applicationType ?? "ltc";
 
   const handleFinalSubmit = async (applnNo) => {
   try {
-    const res = await fetch(
+    const res = await authFetch(
       `${API_BASE}/api/ltc/final-submit/${applnNo}`,
       { method: "PUT" }
     );
@@ -342,11 +344,8 @@ const applicationType = location.state?.applicationType ?? "ltc";
   const handleEdit = async (index) => {
     const app = applications[index];
       // 🚫 HARD BUSINESS GUARD
-  if (!app || app.status !== "PENDING") {
-    showToast(
-      `This application is already ${app?.status || "processed"} and cannot be edited.`,
-      "error"
-    );
+  if (!app || app.status !== "DRAFT") {
+    showToast("Only draft applications can be edited.", "info");
     return;
   }
     setEmployeeId(app.empId);
@@ -374,7 +373,7 @@ const applicationType = location.state?.applicationType ?? "ltc";
     setSubmitAttempted(false);
 
     try {
-      const res = await fetch(`${API_BASE}/api/ltc/ApplnNo/${app.ApplnNo}`);
+      const res = await authFetch(`${API_BASE}/api/ltc/ApplnNo/${app.ApplnNo}`);
       if (res.ok) {
         const data = await res.json();
         const filesFromServer = buildFilesFromServer(
@@ -1010,7 +1009,10 @@ const applicationType = location.state?.applicationType ?? "ltc";
                           <div className="action-btn-group">
                             <button
                               className="edit-btn"
-                              onClick={() => handleEdit(index)}
+                              onClick={() => handleEdit(
+                                  applications.findIndex((a) => a.ApplnNo === app.ApplnNo)
+                                )
+                              }
                             >
                               Edit
                             </button>

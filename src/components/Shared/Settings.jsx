@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Settings.css";
+import { authFetch } from "../Shared/authFetch";
+
 
 const TABS = ["General", "Notifications", "Privacy", "Display", "Security"];
 
@@ -117,7 +119,7 @@ const Settings = () => {
     setSecurityLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/auth/change-password", {
+      const res = await authFetch("http://localhost:8080/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -143,7 +143,7 @@
   margin-bottom: 0;
 }
 
-.fetch-btn {
+.authFetch-btn {
   padding: 9px 12px;
   border: none;
   background: #2563eb;
@@ -155,7 +155,7 @@
   transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
 }
 
-.fetch-btn:hover {
+.authFetch-btn:hover {
   transform: translateY(-1px);
   opacity: 0.96;
   box-shadow: 0 6px 14px rgba(37, 99, 235, 0.4);

@@ -6,6 +6,7 @@ import ApprovalAuditView from "../Shared/ApprovalAuditView";
 
 import AttachFile from "../Shared/AttachFile";
 import { formatFileNameForDisplay } from "../Shared/fileNameUtils";
+import { authFetch } from "../Shared/authFetch";
 
 function DAApplication() {
 const location = useLocation();
@@ -63,7 +64,7 @@ const applicationType = location.state?.applicationType ?? "da";
     async (empId) => {
       if (!empId) return;
       try {
-        const res = await fetch(`${API_BASE}/api/da/empId/${empId}`);
+        const res = await authFetch(`${API_BASE}/api/da/empId/${empId}`);
         if (res.ok) {
           const data = await res.json();
           const mapped = Array.isArray(data)
@@ -81,7 +82,7 @@ const applicationType = location.state?.applicationType ?? "da";
                 billDate: d.billDate,
                 billAmount: d.billAmount,
                 purpose: d.purpose,
-                status: (d.status || "PENDING").toUpperCase(),
+                status: (d.status || "DRAFT").toUpperCase(),
                 files: d.fileName
                   ? d.fileName
                       .split(";")
@@ -107,7 +108,7 @@ const applicationType = location.state?.applicationType ?? "da";
   //Approval History
    const fetchAudit = async (applnNo) => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/api/da/approvals/approval-history/${applnNo}`
       );
       if (!res.ok) {
@@ -258,7 +259,7 @@ const applicationType = location.state?.applicationType ?? "da";
           ? `${API_BASE}/api/da/update/${ApplnNo}`
           : `${API_BASE}/api/da/submit`;
       const method = editingIndex !== null ? "PUT" : "POST";
-      const res = await fetch(url, { method, body: formData });
+      const res = await authFetch(url, { method, body: formData });
 
       if (res.status === 400) {
         const data = await res.json().catch(() => ({}));
@@ -314,7 +315,7 @@ const applicationType = location.state?.applicationType ?? "da";
 
   const handleFinalSubmit = async (applnNo) => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/api/da/final-submit/${applnNo}`,
         { method: "PUT" }
       );
@@ -341,13 +342,10 @@ const applicationType = location.state?.applicationType ?? "da";
     const app = applications[index];
 
           // 🚫 HARD BUSINESS GUARD
-  if (!app || app.status !== "PENDING") {
-    showToast(
-      `This application is already ${app?.status || "processed"} and cannot be edited.`,
-      "error"
-    );
-    return;
-  }
+  if (!app || app.status !== "DRAFT") {
+  showToast("Only draft applications can be edited.", "info");
+  return;
+}
     setEmployeeId(app.empId);
     setEmployeeData({
       empId: app.empId,
@@ -372,7 +370,7 @@ const applicationType = location.state?.applicationType ?? "da";
     setSubmitAttempted(false);
 
     try {
-      const res = await fetch(`${API_BASE}/api/da/ApplnNo/${app.ApplnNo}`);
+      const res = await authFetch(`${API_BASE}/api/da/ApplnNo/${app.ApplnNo}`);
       if (res.ok) {
         const data = await res.json();
         if (data.fileName) {
@@ -1001,7 +999,10 @@ const applicationType = location.state?.applicationType ?? "da";
                         <div className="action-btn-group">
                           <button
                             className="edit-btn"
-                            onClick={() => handleEdit(index)}
+                            onClick={() => handleEdit(
+                                  applications.findIndex((a) => a.ApplnNo === app.ApplnNo)
+                                )
+                              }
                           >
                             Edit
                           </button>

@@ -3,6 +3,7 @@ import "./LeaveApplication.css";
 import "../Shared/AttachFile.css";
 import { useLocation } from "react-router-dom";
 import ApprovalAuditView from "../Shared/ApprovalAuditView";
+import { authFetch } from "../Shared/authFetch";
 
 import AttachFile from "../Shared/AttachFile";
 import { formatFileNameForDisplay } from "../Shared/fileNameUtils";
@@ -56,7 +57,7 @@ const applicationType = location.state?.applicationType ?? "leave";
     async (empId) => {
       if (!empId) return;
       try {
-        const res = await fetch(`${API_BASE}/api/leave/empId/${empId}`);
+        const res = await authFetch(`${API_BASE}/api/leave/empId/${empId}`);
         if (res.ok) {
           const data = await res.json();
           const mapped = Array.isArray(data)
@@ -97,7 +98,7 @@ const applicationType = location.state?.applicationType ?? "leave";
   //Approval History
    const fetchAudit = async (applnNo) => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/api/leave/approvals/approval-history/${applnNo}`
       );
       if (!res.ok) {
@@ -168,7 +169,7 @@ const applicationType = location.state?.applicationType ?? "leave";
 
   const handleFinalSubmit = async (applnNo) => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/api/leave/final-submit/${applnNo}`,
         { method: "PUT" }
       );
@@ -270,7 +271,7 @@ const applicationType = location.state?.applicationType ?? "leave";
 
       const method = editingIndex !== null ? "PUT" : "POST";
 
-      const res = await fetch(url, { method, body: formData });
+      const res = await authFetch(url, { method, body: formData });
 
       console.log("Submit response status:", res.status);
 
@@ -355,7 +356,7 @@ const applicationType = location.state?.applicationType ?? "leave";
     setSubmitAttempted(false);
 
     try {
-      const res = await fetch(`${API_BASE}/api/leave/ApplnNo/${app.ApplnNo}`);
+      const res = await authFetch(`${API_BASE}/api/leave/ApplnNo/${app.ApplnNo}`);
       if (res.ok) {
         const data = await res.json();
 

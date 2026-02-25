@@ -140,3 +140,21 @@
 .attachments a:hover {
   text-decoration: underline;
 }
+.attachments ul {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 6px;
+}
+
+.attachment-link {
+  color: #4da3ff;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+
+.attachment-link:hover {
+  text-decoration: underline;
+  color: #7ec8ff;
+}

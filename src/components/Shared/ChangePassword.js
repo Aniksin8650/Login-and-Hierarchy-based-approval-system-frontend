@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import "./Login.css";            // reuse the login layout styles
 import "./ChangePassword.css";   // small custom tweaks
+import { authFetch } from "../Shared/authFetch";
+
 
 // reuse same helper style
 const buildEmpId = (digits) => {
@@ -54,7 +56,7 @@ function ChangePassword() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/auth/change-password", {
+      const res = await authFetch("http://localhost:8080/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

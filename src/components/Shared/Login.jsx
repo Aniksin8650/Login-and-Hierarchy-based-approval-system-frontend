@@ -71,6 +71,11 @@ function Login() {
       }
 
       const user = JSON.parse(text);
+
+      // 🔐 Store JWT
+      localStorage.setItem("token", user.token);
+
+      // Store full user info
       localStorage.setItem("userInfo", JSON.stringify(user));
 
       showToast(`Welcome ${user.name}!`, "success");
@@ -213,14 +218,14 @@ function Login() {
               const isPrimary =
                 primaryRole &&
                 r.roleNo === primaryRole.roleNo &&
-                r.dte === primaryRole.dte &&
-                r.div === primaryRole.div;
+                r.directorate === primaryRole.directorate &&
+                r.division === primaryRole.division;
 
               const checked =
                 selectedRole &&
                 r.roleNo === selectedRole.roleNo &&
-                r.dte === selectedRole.dte &&
-                r.div === selectedRole.div;
+                r.directorate === selectedRole.directorate &&
+                r.division === selectedRole.division;
 
               return (
                 <label
@@ -242,8 +247,9 @@ function Login() {
                       {isPrimary && " ⭐"}
                     </strong>
 
+                    {/* ✅ FIXED HERE */}
                     <div className="role-sub">
-                      {r.dte} → {r.div}
+                      {r.directorate} → {r.division}
                     </div>
 
                     {isPrimary ? (

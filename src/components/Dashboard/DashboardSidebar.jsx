@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./DashboardLayout.css";
+import { authFetch } from "../Shared/authFetch";
+
 
 const formatRoleName = (role = "") =>
   role
@@ -19,7 +21,6 @@ const DashboardSidebar = ({ open, onClose }) => {
   const empId = userInfo?.empId;
 
   const roleName = role?.roleName || "EMPLOYEE";
-  const roleKey = roleName.toUpperCase();
   const roleDisplay = formatRoleName(roleName);
 
   const roleNo = role?.roleNo;
@@ -55,20 +56,24 @@ const DashboardSidebar = ({ open, onClose }) => {
   });
 
   useEffect(() => {
-    if (!empId) return;
+  if (!empId) return;
 
-    const BASE_URL = "http://localhost:8080";
+  const BASE_URL = "http://localhost:8080";
 
+  const fetchAll = async () => {
     const fetchCount = async (url, key) => {
       try {
-        const res = await fetch(url);
+        const res = await authFetch(url);
         if (!res.ok) {
           setApplyCounts((p) => ({ ...p, [key]: null }));
           return;
         }
         const text = await res.text();
         const num = parseInt(text, 10);
-        setApplyCounts((p) => ({ ...p, [key]: isNaN(num) ? null : num }));
+        setApplyCounts((p) => ({
+          ...p,
+          [key]: isNaN(num) ? null : num,
+        }));
       } catch {
         setApplyCounts((p) => ({ ...p, [key]: null }));
       }
@@ -78,7 +83,23 @@ const DashboardSidebar = ({ open, onClose }) => {
     fetchCount(`${BASE_URL}/api/ta/count/pending/${empId}`, "ta");
     fetchCount(`${BASE_URL}/api/da/count/pending/${empId}`, "da");
     fetchCount(`${BASE_URL}/api/ltc/count/pending/${empId}`, "ltc");
-  }, [empId, open]);
+  };
+
+  fetchAll();
+
+  // ✅ Auto refresh
+  const interval = setInterval(fetchAll, 20000);
+
+  // ✅ Refresh after approve/reject
+  const refreshListener = () => fetchAll();
+  window.addEventListener("countsUpdated", refreshListener);
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener("countsUpdated", refreshListener);
+  };
+
+}, [empId]);
 
   const totalApplyPending = Object.values(applyCounts).reduce(
     (sum, v) => sum + (typeof v === "number" ? v : 0),
@@ -95,20 +116,24 @@ const DashboardSidebar = ({ open, onClose }) => {
   });
 
   useEffect(() => {
-    if (!empId || !canApprove) return;
+  if (!empId || !canApprove) return;
 
-    const BASE_URL = "http://localhost:8080";
+  const BASE_URL = "http://localhost:8080";
 
+  const fetchAll = async () => {
     const fetchRequestCount = async (url, key) => {
       try {
-        const res = await fetch(url);
+        const res = await authFetch(url);
         if (!res.ok) {
           setRequestCounts((p) => ({ ...p, [key]: null }));
           return;
         }
         const text = await res.text();
         const num = parseInt(text, 10);
-        setRequestCounts((p) => ({ ...p, [key]: isNaN(num) ? null : num }));
+        setRequestCounts((p) => ({
+          ...p,
+          [key]: isNaN(num) ? null : num,
+        }));
       } catch {
         setRequestCounts((p) => ({ ...p, [key]: null }));
       }
@@ -130,7 +155,23 @@ const DashboardSidebar = ({ open, onClose }) => {
       `${BASE_URL}/api/ltc/approvals/count/pending-for-me?empId=${empId}`,
       "ltc"
     );
-  }, [empId, canApprove, open]);
+  };
+
+  fetchAll();
+
+  // ✅ Auto refresh
+  const interval = setInterval(fetchAll, 2000);
+
+  // ✅ Refresh after approve/reject
+  const refreshListener = () => fetchAll();
+  window.addEventListener("countsUpdated", refreshListener);
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener("countsUpdated", refreshListener);
+  };
+
+}, [empId, canApprove]);
 
 
   const totalRequestPending = Object.values(requestCounts).reduce(

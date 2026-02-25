@@ -6,6 +6,8 @@ import ApprovalAuditView from "../Shared/ApprovalAuditView";
 
 import AttachFile from "../Shared/AttachFile";
 import { formatFileNameForDisplay } from "../Shared/fileNameUtils";
+import { authFetch } from "../Shared/authFetch";
+
 
 function TAApplication() {
 const location = useLocation();
@@ -86,7 +88,7 @@ const applicationType = location.state?.applicationType ?? "ta";
   //Approval History
    const fetchAudit = async (applnNo) => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/api/ta/approvals/approval-history/${applnNo}`
       );
       if (!res.ok) {
@@ -130,7 +132,7 @@ const applicationType = location.state?.applicationType ?? "ta";
     async (empId) => {
       if (!empId) return;
       try {
-        const res = await fetch(`${API_BASE}/api/ta/empId/${empId}`);
+        const res = await authFetch(`${API_BASE}/api/ta/empId/${empId}`);
         if (res.ok) {
           const data = await res.json();
           const mapped = Array.isArray(data)
@@ -322,7 +324,7 @@ const applicationType = location.state?.applicationType ?? "ta";
           : `${API_BASE}/api/ta/submit`;
       const method = editingIndex !== null ? "PUT" : "POST";
 
-      const res = await fetch(url, { method, body: formData });
+      const res = await authFetch(url, { method, body: formData });
 
       console.log("TA submit status:", res.status);
 
@@ -380,7 +382,7 @@ const applicationType = location.state?.applicationType ?? "ta";
 
   const handleFinalSubmit = async (applnNo) => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/api/ta/final-submit/${applnNo}`,
         { method: "PUT" }
       );
@@ -441,7 +443,7 @@ const applicationType = location.state?.applicationType ?? "ta";
     setSubmitAttempted(false);
 
     try {
-      const res = await fetch(`${API_BASE}/api/ta/ApplnNo/${app.ApplnNo}`);
+      const res = await authFetch(`${API_BASE}/api/ta/ApplnNo/${app.ApplnNo}`);
       if (res.ok) {
         const data = await res.json();
         const filesFromServer = buildFilesFromServer(
@@ -1139,7 +1141,9 @@ const applicationType = location.state?.applicationType ?? "ta";
                         <div className="action-btn-group">
                           <button
                             className="edit-btn"
-                            onClick={() => handleEdit(index)}
+                            onClick={() =>handleEdit(
+                                  applications.findIndex((a) => a.ApplnNo === app.ApplnNo)
+                                )}
                           >
                             Edit
                           </button>

@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-
 /* 🔹 Shared Layout */
 import NavbarSwitcher from "./components/Shared/Navbar/NavbarSwitcher";
 import Footer from "./components/Shared/Footer";
@@ -27,7 +26,6 @@ import PrintLeaveApplications from "./components/Leave/PrintLeaveApplications";
 
 /* 🔐 Legacy Admin (KEEP – backward compatibility) */
 import AdminDashboard from "./components/Admin/AdminDashboard";
-// import AdminApplyPortal from "./components/Admin/AdminApplyPortal";
 import AdminRequestsPortal from "./components/Admin/AdminRequestsPortal";
 import RequireRole from "./components/Shared/RequireRole";
 
@@ -38,6 +36,9 @@ import AdminLTCRequests from "./components/Admin/Requests/AdminLTCRequests";
 
 /* 🧱 Unified Dashboard Layout */
 import DashboardLayout from "./components/Dashboard/DashboardLayout";
+
+/* ✅ NEW: Protected Route */
+import ProtectedRoute from "./components/Shared/ProtectedRoute";
 
 function App() {
   return (
@@ -77,35 +78,46 @@ function App() {
             />
 
             {/* ================= NEW UNIFIED DASHBOARD ================= */}
-            <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               {/* Landing */}
               <Route index element={<Dashboard />} />
 
               {/* APPLY */}
               <Route path="apply">
-                {/* default apply page */}
                 <Route index element={<Dashboard />} />
-
                 <Route path="leave" element={<LeaveApplication />} />
                 <Route path="ta" element={<TAApplication />} />
                 <Route path="da" element={<DAApplication />} />
                 <Route path="ltc" element={<LTCApplication />} />
               </Route>
 
-              {/* REQUESTS */}
-              <Route path="requests">
-                <Route index element={<AdminRequestsPortal />} />
-
+              {/* REQUESTS (Role Protected) */}
+              <Route
+                path="requests"
+                element={
+                  <ProtectedRoute allowedRoles={["Director", "Division Head", "ADMIN"]}>
+                    <AdminRequestsPortal />
+                  </ProtectedRoute>
+                }
+              >
                 <Route path="leave" element={<AdminLeaveRequests />} />
                 <Route path="ta" element={<AdminTARequests />} />
                 <Route path="da" element={<AdminDARequests />} />
                 <Route path="ltc" element={<AdminLTCRequests />} />
               </Route>
+
             </Route>
           </Routes>
         </div>
-        <ToastContainer position="top-right" autoClose={3000} />
 
+        <ToastContainer position="top-right" autoClose={3000} />
 
         {/* 🔽 Footer */}
         <Footer />
